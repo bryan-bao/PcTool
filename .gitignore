@@ -1,0 +1,73 @@
+# ===== 整体排除：金融知识科普（按要求不提交）=====
+金融知识科普/
+
+# ===== 整体排除：打包好的成品（无源码、超大）=====
+AndroidDeviceMonitor/
+
+# ===== Python =====
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+venv/
+.venv/
+env/
+
+# ===== 构建产物 / 打包输出 =====
+build/
+dist/
+*.spec
+node_modules/
+frontend/dist/
+
+# ===== 二进制可执行 / 安装包 =====
+*.exe
+*.dll
+*.pyd
+*.so
+*.asar
+*.pak
+*.dat
+*.bin
+*.msi
+
+# ===== 系统镜像 / 大体积资源（与项目源码无关）=====
+*.iso
+*.img
+*.zip
+*.7z
+*.rar
+
+# ===== 音视频（与项目源码无关）=====
+*.mp4
+*.avi
+*.mkv
+*.mov
+*.mp3
+*.wav
+*.flac
+*.m4a
+
+# ===== 运行时产物 / 缓存 / 日志 =====
+*.log
+.omc/
+webview_data/
+audio_output/
+received/
+backup/
+log/
+
+# ===== 各工具特定的本地产物 =====
+ApkInstallTool/platform-tools/adb.exe
+ApkInstallTool/platform-tools/*.dll
+InstallationTools/images/
+InstallationTools/tools/editions.*
+TranslationTool/安装包/
+TranslationTool/安装好的程序/
+TranslationTool/tools/Inno*
+
+# ===== 编辑器 / 系统 =====
+.vscode/
+.idea/
+Thumbs.db
+.DS_Store

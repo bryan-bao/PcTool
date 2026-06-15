@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>磁盘清理工具 · 使用文档</title>
+<style>
+  :root{
+    --bg:#f5f7fa; --card:#ffffff; --ink:#1f2933; --muted:#6b7280;
+    --line:#e5e7eb; --brand:#2563eb; --brand-soft:#eff6ff;
+    --ok:#16a34a; --ok-bg:#ecfdf5; --warn:#d97706; --warn-bg:#fffbeb;
+    --risk:#dc2626; --risk-bg:#fef2f2; --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",-apple-system,system-ui,sans-serif;
+    line-height:1.7; font-size:16px;
+  }
+  .wrap{max-width:980px; margin:0 auto; padding:32px 20px 80px;}
+  header.doc{
+    background:linear-gradient(135deg,var(--brand),#4f46e5);
+    color:#fff; border-radius:var(--radius); padding:30px 34px; margin-bottom:24px;
+    box-shadow:0 10px 30px rgba(37,99,235,.25);
+  }
+  header.doc h1{margin:0 0 8px; font-size:30px;}
+  header.doc .sub{font-size:16px; opacity:.95; margin:0 0 12px;}
+  header.doc .meta{opacity:.85; font-size:13px;}
+  nav.toc{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:18px 22px; margin-bottom:24px;
+  }
+  nav.toc strong{display:block; margin-bottom:10px; color:var(--muted); font-size:13px; letter-spacing:.05em;}
+  nav.toc a{
+    display:inline-block; margin:4px 10px 4px 0; padding:5px 12px; border-radius:999px;
+    background:var(--brand-soft); color:var(--brand); text-decoration:none; font-size:14px;
+  }
+  nav.toc a:hover{background:var(--brand); color:#fff;}
+  section.card{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:24px 28px; margin-bottom:20px; box-shadow:0 1px 3px rgba(0,0,0,.04);
+  }
+  section.card h2{margin:0 0 14px; font-size:21px; display:flex; align-items:center; gap:8px;}
+  section.card h2::before{content:""; width:5px; height:21px; background:var(--brand); border-radius:3px;}
+  section.card h3{margin:20px 0 8px; font-size:16px; color:#0f172a;}
+  p{margin:10px 0;}
+  /* 步骤 */
+  ol.steps{counter-reset:step; list-style:none; padding:0; margin:14px 0;}
+  ol.steps li{position:relative; padding:10px 0 10px 46px; border-bottom:1px dashed var(--line);}
+  ol.steps li:last-child{border-bottom:0;}
+  ol.steps li::before{
+    counter-increment:step; content:counter(step);
+    position:absolute; left:0; top:9px; width:30px; height:30px; border-radius:50%;
+    background:var(--brand); color:#fff; font-weight:700; text-align:center; line-height:30px;
+  }
+  /* 胶囊（对应软件里的安全标记） */
+  .pill{display:inline-block; padding:2px 11px; border-radius:999px; font-size:13px; font-weight:600; white-space:nowrap;}
+  .pill.g{background:#dcfce7; color:#166534;}
+  .pill.y{background:#fef3c7; color:#92400e;}
+  .pill.r{background:#fee2e2; color:#991b1b;}
+  .badge{display:inline-block; padding:3px 10px; border-radius:999px; font-size:13px; font-weight:600;}
+  .badge.ok{background:var(--ok-bg); color:var(--ok);}
+  .badge.warn{background:var(--warn-bg); color:var(--warn);}
+  .badge.risk{background:var(--risk-bg); color:var(--risk);}
+  .callout{border-left:4px solid var(--brand); background:var(--brand-soft); padding:12px 16px; border-radius:0 8px 8px 0; margin:14px 0;}
+  .callout.risk{border-color:var(--risk); background:var(--risk-bg);}
+  .callout.ok{border-color:var(--ok); background:var(--ok-bg);}
+  .callout.warn{border-color:var(--warn); background:var(--warn-bg);}
+  table{width:100%; border-collapse:collapse; margin:14px 0; font-size:14.5px;}
+  th,td{border:1px solid var(--line); padding:9px 11px; text-align:left; vertical-align:top;}
+  th{background:#f9fafb; color:var(--muted); font-size:13px;}
+  td code, p code{background:#f1f5f9; padding:1px 6px; border-radius:5px; font-size:13px;}
+  .kbd{background:#1f2933; color:#fff; padding:2px 8px; border-radius:6px; font-size:12.5px;}
+  .diagram{background:#fafbfc; border:1px dashed var(--line); border-radius:10px; padding:16px; text-align:center; overflow:auto;}
+  .two{display:flex; gap:16px; flex-wrap:wrap;}
+  .two > div{flex:1; min-width:260px; border:1px solid var(--line); border-radius:10px; padding:14px 16px; background:#fcfcfd;}
+  .two h3{margin-top:0;}
+  @media (max-width:600px){ .wrap{padding:20px 14px;} header.doc{padding:22px;} section.card{padding:18px;} }
+  @media print{
+    body{background:#fff;} header.doc{box-shadow:none; -webkit-print-color-adjust:exact; print-color-adjust:exact;}
+    nav.toc{display:none;} section.card{break-inside:avoid; box-shadow:none;}
+    .pill,.badge{-webkit-print-color-adjust:exact; print-color-adjust:exact;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="doc">
+    <h1>🧹 磁盘清理工具 · 使用文档</h1>
+    <p class="sub">选磁盘、勾内容、点扫描，安全地把没用的垃圾和大文件清掉，给 C 盘腾地方。</p>
+    <div class="meta">更新时间：2026-06-09 ｜ 运行环境：Windows 10/11 + PowerShell ｜ 删除一律进回收站，可找回</div>
+  </header>
+
+  <nav class="toc">
+    <strong>目录</strong>
+    <a href="#what">这是什么</a>
+    <a href="#start">怎么启动</a>
+    <a href="#flow">操作流程</a>
+    <a href="#cats">能清理哪些东西</a>
+    <a href="#mark">安全标记怎么看</a>
+    <a href="#bigfile">大文件 vs 大文件夹</a>
+    <a href="#sort">排序规则</a>
+    <a href="#ops">右键 / 悬停说明</a>
+    <a href="#clean">清理与找回</a>
+    <a href="#faq">注意事项 & 常见问题</a>
+  </nav>
+
+  <!-- 这是什么 -->
+  <section class="card" id="what">
+    <h2>这是什么</h2>
+    <p>一个 Windows 桌面小工具，帮你把磁盘上<strong>没用的垃圾、缓存、超大文件、占地的整个文件夹</strong>找出来，确认后一键清掉，主要用来给快满的 C 盘腾空间。</p>
+    <div class="callout ok"><strong>三个让你放心的设计：</strong>
+      ① 删的东西<strong>全部进回收站</strong>，删错了能还原；
+      ② 扫描在<strong>后台跑，界面不卡</strong>，随时能取消；
+      ③ 每一项都标了<strong>安全等级</strong>（能不能放心删），危险的默认不勾。
+    </div>
+    <h3>它怎么帮你判断"能不能删"</h3>
+    <p>对系统垃圾/缓存这类，它知道删了系统会自动重建、没有副作用；对你自己的大文件/大文件夹，它会看"多久没动过""在什么位置"，给出建议，但<strong>最终删不删由你勾选决定</strong>。</p>
+  </section>
+
+  <!-- 怎么启动 -->
+  <section class="card" id="start">
+    <h2>怎么启动</h2>
+    <ol class="steps">
+      <li>在项目文件夹里找到 <code>一键启动.bat</code>，<strong>双击它</strong>。</li>
+      <li>会弹出一个 <strong>UAC 管理员授权</strong>窗口（蓝色的"是否允许…"）——点<strong>"是"</strong>。<br>
+          <span class="badge warn">为什么要管理员</span> 系统垃圾、更新缓存、日志这些放在受保护的系统目录里，没有管理员权限删不动。</li>
+      <li>稍等一两秒，主界面就出来了。</li>
+    </ol>
+    <div class="callout"><strong>不想用 .bat 的话：</strong>也可以手动用管理员身份打开 PowerShell，运行项目里的 <code>src\Start.ps1</code>（启动参数要带 <code>-STA</code>）。一般直接双击 .bat 最省事。</div>
+  </section>
+
+  <!-- 操作流程 -->
+  <section class="card" id="flow">
+    <h2>操作流程（一条龙）</h2>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart LR
+  A["① 选磁盘<br>顶部勾要扫的盘"] --> B["② 勾内容<br>勾要清理的类别"]
+  B --> C["③ 开始扫描<br>后台跑·可取消"]
+  C --> D["④ 看结果<br>分组·安全标记·排序"]
+  D --> E["⑤ 勾要删的项"]
+  E --> F["⑥ 清理选中项<br>确认后删到回收站"]
+  F --> G["✅ 完成<br>自动重扫核对效果"]
+      </pre>
+      <noscript>流程：① 选磁盘 → ② 勾要清理的内容 → ③ 开始扫描（后台） → ④ 看结果 → ⑤ 勾要删的 → ⑥ 清理选中项（删到回收站） → ✅ 完成并自动重扫</noscript>
+    </div>
+    <div class="callout"><strong>小贴士：</strong>扫描过程中按钮会变成"⏹ 取消扫描"，随时能停。扫"大文件 / 大文件夹"是最慢的一步，因为要翻遍磁盘算大小，耐心等一下。</div>
+  </section>
+
+  <!-- 能清理哪些东西 -->
+  <section class="card" id="cats">
+    <h2>能清理哪些东西</h2>
+    <p>顶部一排可勾选的类别，绿色那几类默认就勾上了（放心删），后面三类风险高一些、默认不勾。</p>
+    <table>
+      <tr><th style="width:140px">类别</th><th>这是什么</th><th>删了有什么影响</th><th style="width:96px">安全等级</th><th style="width:70px">默认</th></tr>
+      <tr><td>🧽 系统临时</td><td>程序运行时产生的临时垃圾文件</td><td>不影响使用，系统之后会自动重建</td><td><span class="pill g">可放心删</span></td><td>✅ 勾</td></tr>
+      <tr><td>🗑 回收站</td><td>你之前删进回收站的东西</td><td><strong>清空 = 彻底删除、无法再找回</strong>，先确认里面没想留的</td><td><span class="pill g">可放心删</span></td><td>✅ 勾</td></tr>
+      <tr><td>🌐 浏览器缓存</td><td>浏览器为了打开网页更快存的临时文件</td><td>不影响账号登录和收藏，下次访问网页稍慢一点点<br><span class="badge warn">注意</span> 清理时会自动关掉 Chrome / Edge</td><td><span class="pill g">可放心删</span></td><td>✅ 勾</td></tr>
+      <tr><td>♻️ 更新缓存</td><td>Windows 下载更新时攒下的安装包</td><td>装完就没用了，需要时系统会自动重下</td><td><span class="pill g">可放心删</span></td><td>✅ 勾</td></tr>
+      <tr><td>💥 崩溃转储</td><td>程序/系统崩溃留下的诊断文件（含蓝屏 MEMORY.DMP）</td><td>普通使用用不上</td><td><span class="pill g">可放心删</span></td><td>✅ 勾</td></tr>
+      <tr><td>🖼️ 缩略图缓存</td><td>文件夹里图片、视频的预览小图缓存</td><td>下次打开文件夹会自动重建</td><td><span class="pill g">可放心删</span></td><td>✅ 勾</td></tr>
+      <tr><td>📜 系统日志</td><td>Windows 各种运行日志</td><td>不影响使用（正在占用的会自动跳过）</td><td><span class="pill g">可放心删</span></td><td>✅ 勾</td></tr>
+      <tr><td>📦 大文件 &gt;100MB</td><td>单个超过 100MB 的文件（视频、镜像、安装包等）</td><td><strong>是你自己的文件</strong>，确认不用了再删；删后可在回收站找回</td><td><span class="pill y">建议确认</span> / <span class="pill r">谨慎</span></td><td>不勾</td></tr>
+      <tr><td>🗂️ 大文件夹 &gt;100MB</td><td>常用位置里体积大的<strong>整个子文件夹</strong></td><td>连里面所有文件<strong>一起</strong>删到回收站，可找回。详见下一节</td><td><span class="pill y">建议确认</span> / <span class="pill r">谨慎</span></td><td>不勾</td></tr>
+      <tr><td>🗂️ Windows.old</td><td>系统升级后保留的旧版本备份，常有 10~20GB</td><td><strong>⚠ 删了就无法再回退到升级前的旧系统</strong></td><td><span class="pill y">建议确认</span></td><td>不勾</td></tr>
+    </table>
+    <div class="callout"><strong>扫"大文件"还得先勾磁盘：</strong>大文件是按你顶部勾的磁盘去翻的，所以要先勾盘。大文件夹则固定扫几个常用位置（见下一节），不看你勾哪个盘。</div>
+  </section>
+
+  <!-- 安全标记 -->
+  <section class="card" id="mark">
+    <h2>安全标记怎么看</h2>
+    <p>结果列表里每一行左边有个彩色小胶囊，告诉你这东西删起来有多大风险：</p>
+    <table>
+      <tr><th style="width:120px">标记</th><th>含义</th><th>典型例子</th></tr>
+      <tr><td><span class="pill g">可放心删</span></td><td>系统垃圾/缓存，删了没有副作用，系统会自动重建</td><td>临时文件、浏览器缓存、缩略图缓存</td></tr>
+      <tr><td><span class="pill y">建议确认</span></td><td>是你自己的东西，或者比较久没动过；删之前自己确认一下</td><td>很久没用的大文件、下载夹里的大文件夹</td></tr>
+      <tr><td><span class="pill r">谨慎</span></td><td>最近还在用，或者是已安装程序的目录；删前三思</td><td>这几天改过的大文件、Program Files 里的程序目录</td></tr>
+    </table>
+    <div class="callout">绿色的会<strong>默认勾上</strong>、排在列表最前面；黄色和红色默认不勾，要你自己决定。</div>
+  </section>
+
+  <!-- 大文件 vs 大文件夹 -->
+  <section class="card" id="bigfile">
+    <h2>大文件 vs 大文件夹（重点）</h2>
+    <p>这两个容易搞混，但解决的是两类不同的问题：</p>
+    <div class="two">
+      <div>
+        <h3>📦 大文件 &gt;100MB</h3>
+        <p>找<strong>单个</strong>超过 100MB 的文件。适合揪出某个忘了删的大视频、大镜像、大安装包。</p>
+        <p><strong>范围：</strong>你顶部勾选的磁盘，整盘翻。</p>
+        <p><strong>删除：</strong>删那一个文件。</p>
+      </div>
+      <div>
+        <h3>🗂️ 大文件夹 &gt;100MB</h3>
+        <p>找体积大的<strong>整个文件夹</strong>——哪怕里面全是小文件堆起来的也能发现。适合清掉卸载残留、下载解压的整个目录。</p>
+        <p><strong>范围：</strong>只扫"常堆东西的地方"（见下）。</p>
+        <p><strong>删除：</strong>连里面所有东西一起删到回收站。</p>
+      </div>
+    </div>
+    <div class="callout ok"><strong>为什么要有"大文件夹"：</strong>只删一个大文件，会把一个目录删得残缺、里面的小文件还在、没清干净。"大文件夹"是以<strong>整个文件夹为单位</strong>来清，干净利落。</div>
+    <h3>"大文件夹"会扫这些位置</h3>
+    <p>下载、桌面、文档、<code>AppData\Local</code>、<code>AppData\Roaming</code>、<code>ProgramData</code>、<code>Program Files</code>（含 x86）。这些是安装包、缓存、软件目录最容易堆积的地方；像 <code>C:\Windows</code> 这种系统目录<strong>不会</strong>被当成可删文件夹列出来，避免误删一大片。</p>
+    <div class="callout warn"><strong>⚠ Program Files 里的目录会标红：</strong>那是已安装的程序，<strong>更稳妥的做法是去"设置 → 应用"里正常卸载</strong>，直接删可能留残余。确实要删也会进回收站、能还原。</div>
+  </section>
+
+  <!-- 排序规则 -->
+  <section class="card" id="sort">
+    <h2>排序规则</h2>
+    <h3>默认顺序</h3>
+    <p>列表默认按这个优先级从上往下排，<strong>最该处理的浮在最顶</strong>：</p>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart LR
+  A["① 已勾选<br>(绿色可回收项)"] --> B["② 新增时间<br>(越新越靠前)"]
+  B --> C["③ 修改时间<br>(越新越靠前)"]
+  C --> D["④ 大小<br>(越大越靠前)"]
+      </pre>
+      <noscript>默认排序：① 绿色可回收项最前 → ② 新增时间新的靠前 → ③ 修改时间新的靠前 → ④ 大小大的靠前</noscript>
+    </div>
+    <p>大文件 / 大文件夹仍然<strong>按所在文件夹（位置）分组</strong>，组里最新的那一条决定这个组排多前，组内再按上面的规则排。这样既看得出文件属于哪儿，最新动过的又能浮上来。</p>
+    <h3>点"大小"列头手动排</h3>
+    <p>点结果表的<strong>「大小」列头</strong>，可以临时按体积排，三段循环切换：</p>
+    <table>
+      <tr><th>点第几下</th><th>效果</th></tr>
+      <tr><td>第 1 下</td><td>从大到小（最占地的排最上）</td></tr>
+      <tr><td>第 2 下</td><td>从小到大</td></tr>
+      <tr><td>第 3 下</td><td>切回默认排序（已勾选→新增→修改→大小）</td></tr>
+    </table>
+    <p>重新扫描一遍也会自动回到默认排序。</p>
+  </section>
+
+  <!-- 右键/悬停 -->
+  <section class="card" id="ops">
+    <h2>右键 / 悬停说明</h2>
+    <div class="two">
+      <div>
+        <h3>🖱️ 右键 → 打开文件所在位置</h3>
+        <p>在任意一行上<strong>点右键</strong>，选「📂 打开文件所在位置」：</p>
+        <ul>
+          <li>大文件 → 打开它所在文件夹并<strong>高亮选中</strong>这个文件</li>
+          <li>大文件夹 → 直接打开那个文件夹</li>
+          <li>回收站那行 → 打开回收站窗口</li>
+        </ul>
+        <p>方便你先去现场看看再决定删不删。</p>
+      </div>
+      <div>
+        <h3>💬 鼠标悬停 → 详细说明</h3>
+        <p>把鼠标<strong>停</strong>在某一行上，会弹出一个黑底小窗，说清楚：</p>
+        <ul>
+          <li>这是什么类型、<strong>大概干嘛用的</strong>（按扩展名+所在位置猜）</li>
+          <li>完整路径、精确大小</li>
+          <li>创建 / 修改 / 最后打开时间、多久没动过</li>
+          <li>是不是正被程序占用、删除提醒</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 清理与找回 -->
+  <section class="card" id="clean">
+    <h2>清理与找回</h2>
+    <ol class="steps">
+      <li>勾好要删的项，点右下角红色的 <span class="kbd">🧹 清理选中项</span>。</li>
+      <li>弹窗会告诉你<strong>要删几项、能释放多少空间</strong>，里面有"整个文件夹"的还会单独提醒。确认后开始清。</li>
+      <li>清理也在后台跑，完成后弹出结果，并<strong>自动重扫一遍</strong>方便你核对释放效果。</li>
+    </ol>
+    <div class="callout ok"><strong>删错了不怕：</strong>所有删除都进<strong>回收站</strong>，去回收站右键"还原"就能找回。</div>
+    <h3>遇到"文件被占用"怎么办</h3>
+    <table>
+      <tr><th style="width:160px">情况</th><th>工具的处理</th></tr>
+      <tr><td>普通文件 / 缓存被占用</td><td>会<strong>自动关掉占用它的程序</strong>再删（系统关键进程除外，那种会安全跳过）</td></tr>
+      <tr><td>浏览器缓存</td><td>清理前会<strong>先自动关闭 Chrome / Edge</strong>，请先存好网页里没提交的内容</td></tr>
+      <tr><td>整个大文件夹</td><td>只删到回收站、<strong>不强删、不杀进程</strong>；如果正被占用，就安全跳过、不动它（更稳）</td></tr>
+    </table>
+    <div class="callout warn"><strong>清理前请先保存：</strong>正在编辑的文档、没提交的网页内容先存一下，免得自动关程序时丢了。</div>
+  </section>
+
+  <!-- 注意事项 / FAQ -->
+  <section class="card" id="faq">
+    <h2>注意事项 &amp; 常见问题</h2>
+
+    <h3>必须知道的风险点</h3>
+    <div class="callout risk"><strong>🗂️ Windows.old：</strong>删了就<strong>无法再回退到升级前的旧系统</strong>。只有当你确定升级后一切正常、不需要退回时再删。</div>
+    <div class="callout risk"><strong>🗑 清空回收站：</strong>这一步是<strong>彻底删除、找不回来</strong>的。清之前确认回收站里没有还想要的东西。</div>
+    <div class="callout warn"><strong>🗂️ Program Files 里的程序目录：</strong>标红的那些建议走"设置 → 应用"正常卸载，别直接删目录，免得留下残余或把程序弄坏。</div>
+
+    <h3>常见问题</h3>
+    <p><strong>Q：双击 .bat 没反应 / 一闪而过？</strong><br>
+    A：多半是没点 UAC 授权的"是"，或被杀毒软件拦了。重新双击、在弹出的授权窗口点"是"；必要时给杀毒软件加个信任。</p>
+    <p><strong>Q：扫描怎么这么久？</strong><br>
+    A：勾了"大文件 / 大文件夹"时，工具要翻遍磁盘逐个算大小，这一步天生慢。只想快速清垃圾的话，别勾这两项，几秒就扫完。</p>
+    <p><strong>Q：清理后空间没少多少？</strong><br>
+    A：删的东西在回收站里还占着地方。要真正释放，去把<strong>回收站清空</strong>（或在工具里勾上"回收站"一起清）。</p>
+    <p><strong>Q：有几项提示"删不掉、已跳过"？</strong><br>
+    A：那是被系统关键进程占用、为安全没动它，属正常。重启电脑后再扫一遍通常就能清掉。</p>
+
+    <h3>给想了解内部的人</h3>
+    <p>工具是 PowerShell + WPF 写的：界面在 <code>src\UI\MainWindow.ps1</code>，各类扫描/删除逻辑在 <code>src\Modules\</code> 下分模块；<code>tests\</code> 里有 Pester 测试。功能改动都有测试覆盖。</p>
+  </section>
+
+</div>
+
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs');
+    m.default.initialize({ startOnLoad:true, theme:'default' });
+  }catch(e){ /* 离线降级：保留 pre 里的文字版关系，不报错 */ }
+</script>
+</body>
+</html>

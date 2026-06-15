@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>一键重装 + 桌面智能还原工具 · 设计方案</title>
+<style>
+  :root{
+    --bg:#f5f7fa; --card:#ffffff; --ink:#1f2933; --muted:#6b7280;
+    --line:#e5e7eb; --brand:#2563eb; --brand-soft:#eff6ff;
+    --ok:#16a34a; --ok-bg:#ecfdf5; --warn:#d97706; --warn-bg:#fffbeb;
+    --risk:#dc2626; --risk-bg:#fef2f2; --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",-apple-system,system-ui,sans-serif;
+    line-height:1.7; font-size:16px;
+  }
+  .wrap{max-width:1000px; margin:0 auto; padding:32px 20px 80px;}
+  header.doc{
+    background:linear-gradient(135deg,var(--brand),#4f46e5);
+    color:#fff; border-radius:var(--radius); padding:28px 32px; margin-bottom:24px;
+    box-shadow:0 10px 30px rgba(37,99,235,.25);
+  }
+  header.doc h1{margin:0 0 8px; font-size:28px;}
+  header.doc .meta{opacity:.9; font-size:14px;}
+  nav.toc{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:18px 22px; margin-bottom:24px;
+  }
+  nav.toc strong{display:block; margin-bottom:10px; color:var(--muted); font-size:13px; letter-spacing:.05em;}
+  nav.toc a{
+    display:inline-block; margin:4px 10px 4px 0; padding:5px 12px; border-radius:999px;
+    background:var(--brand-soft); color:var(--brand); text-decoration:none; font-size:14px;
+  }
+  nav.toc a:hover{background:var(--brand); color:#fff;}
+  section.card{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:24px 28px; margin-bottom:20px; box-shadow:0 1px 3px rgba(0,0,0,.04);
+  }
+  section.card h2{margin:0 0 14px; font-size:20px; display:flex; align-items:center; gap:8px;}
+  section.card h2::before{content:""; width:5px; height:20px; background:var(--brand); border-radius:3px;}
+  section.card h3{margin:18px 0 8px; font-size:16px; color:var(--brand);}
+  .badge{display:inline-block; padding:3px 10px; border-radius:999px; font-size:13px; font-weight:600;}
+  .badge.ok{background:var(--ok-bg); color:var(--ok);}
+  .badge.warn{background:var(--warn-bg); color:var(--warn);}
+  .badge.risk{background:var(--risk-bg); color:var(--risk);}
+  .badge.blue{background:var(--brand-soft); color:var(--brand);}
+  .callout{border-left:4px solid var(--brand); background:var(--brand-soft); padding:12px 16px; border-radius:0 8px 8px 0; margin:12px 0;}
+  .callout.risk{border-color:var(--risk); background:var(--risk-bg);}
+  .callout.ok{border-color:var(--ok); background:var(--ok-bg);}
+  .callout.warn{border-color:var(--warn); background:var(--warn-bg);}
+  table{width:100%; border-collapse:collapse; margin:12px 0; font-size:15px;}
+  th,td{border:1px solid var(--line); padding:10px 12px; text-align:left; vertical-align:top;}
+  th{background:#f9fafb; color:var(--muted);}
+  .diagram{background:#fafbfc; border:1px dashed var(--line); border-radius:10px; padding:16px; text-align:center; overflow:auto;}
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin:12px 0;}
+  .tile{background:#fafbfc; border:1px solid var(--line); border-radius:10px; padding:14px 16px;}
+  .tile h4{margin:0 0 6px; font-size:15px;}
+  .tile p{margin:0; font-size:14px; color:var(--muted);}
+  code{background:#f1f5f9; padding:1px 6px; border-radius:5px; font-size:14px; color:#be185d;}
+  .qa{margin:10px 0; padding:12px 14px; border:1px solid var(--line); border-radius:10px; background:#fafbfc;}
+  .qa .q{font-weight:600; color:var(--ink);}
+  .qa .a{margin-top:4px; color:var(--brand); font-weight:600;}
+  @media (max-width:600px){ .wrap{padding:20px 14px;} header.doc{padding:22px;} section.card{padding:18px;} }
+  @media print{
+    body{background:#fff;} header.doc{box-shadow:none; -webkit-print-color-adjust:exact; print-color-adjust:exact;}
+    nav.toc{display:none;} section.card{break-inside:avoid; box-shadow:none;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="doc">
+    <h1>🛠️ 一键重装 + 桌面智能还原工具</h1>
+    <div class="meta">更新时间：2026-06-04 ｜ 项目路径：E:\InstallationTools ｜ 一句话定位：重装系统前先备份桌面，重装后挑着还原，不丢东西</div>
+  </header>
+
+  <nav class="toc">
+    <strong>目录</strong>
+    <a href="#overview">① 这是个啥</a>
+    <a href="#flow">② 两步走流程图</a>
+    <a href="#interview">③ 需求访谈纪要</a>
+    <a href="#modules">④ 模块划分</a>
+    <a href="#data">⑤ 备份数据长啥样</a>
+    <a href="#risk">⑥ 风险与兜底</a>
+    <a href="#scope">⑦ 范围边界(第一版做啥/不做啥)</a>
+  </nav>
+
+  <section class="card" id="overview">
+    <h2>① 这是个啥</h2>
+    <p>一个在 <strong>能正常进系统的 Windows 11</strong> 里运行的<strong>带界面工具</strong>(不做 U 盘启动盘)。核心解决一件事:<strong>重装系统会清空 C 盘(桌面也在 C 盘),重装后桌面就空了、东西全没了</strong>。这工具帮你在重装前先把桌面"记下来 + 备份好",重装后再列个清单让你<strong>挑着还原</strong>,不要的就顺手清理掉。</p>
+    <div class="callout"><strong>核心结论:</strong>工具<strong>分两步用</strong>——重装<strong>前</strong>先跑"备份"(存到 D 盘/U 盘,不会被清),重装<strong>后</strong>再跑"还原"(勾选列表)。一前一后,缺一步就白搭。</div>
+    <div class="grid">
+      <div class="tile"><h4>🎯 用途</h4><p>重装 Windows + 桌面智能备份还原 + 装后系统优化</p></div>
+      <div class="tile"><h4>👤 给谁用</h4><p>自己常用 + 能拿去帮别人 / 多台机用</p></div>
+      <div class="tile"><h4>🖥️ 形态</h4><p>PowerShell + WPF 图形窗口,列表带复选框,鼠标勾选</p></div>
+      <div class="tile"><h4>📍 放哪</h4><p>E:\InstallationTools(代码 + 文档 + 对话记录)</p></div>
+    </div>
+  </section>
+
+  <section class="card" id="flow">
+    <h2>② 两步走流程图</h2>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart TB
+  subgraph S1["第①步 · 重装【前】备份"]
+    direction TB
+    A1[扫描当前桌面所有图标和文件] --> A2{每个图标是啥?}
+    A2 -->|快捷方式·本体在D/E盘| B1[记下:重装后能救活 ✅]
+    A2 -->|快捷方式·本体在C盘| B2[记下:重装后会失效 ⚠️]
+    A2 -->|你自己的文件/文件夹| B3[列出来让你勾选要不要备份]
+    B1 --> C1[生成备份清单 + 拷贝文件到 D盘/U盘]
+    B2 --> C1
+    B3 --> C1
+  end
+  C1 --> R["🔁 重装系统(二选一)"]
+  R --> R1[档1:重置此电脑·稳]
+  R --> R2[档2:镜像全新装·彻底]
+  R1 --> S2
+  R2 --> S2
+  subgraph S2["第②步 · 重装【后】还原"]
+    direction TB
+    D1[读取备份清单] --> D2[列清单·带复选框]
+    D2 --> D3[你勾选: 哪些还原/哪些不要]
+    D3 --> E1[还原桌面快捷方式 + 文件]
+    E1 --> E2[本体在C盘的: 红色标记'需重装'·不替你装]
+    E2 --> F[顺手做系统优化设置]
+  end
+      </pre>
+      <noscript>流程文字版:第①步备份(扫描桌面→判断每个图标类型→拷贝到D盘/U盘);中间重装系统(重置或镜像);第②步还原(读清单→勾选→还原快捷方式和文件→C盘软件只标记→系统优化)。</noscript>
+    </div>
+    <div class="callout warn"><strong>时间顺序铁律:</strong>"桌面上有啥"必须在<strong>重装之前</strong>采集保存。一重装,C 盘桌面就没了,事后找不回来。</div>
+  </section>
+
+  <section class="card" id="interview">
+    <h2>③ 需求访谈纪要</h2>
+    <p style="color:var(--muted);font-size:14px;">下面是咱们这次对话里一问一答确定下来的需求,留档备查。</p>
+    <div class="qa"><div class="q">Q1 工具核心用途?</div><div class="a">→ 重装 Windows + 系统配置/优化</div></div>
+    <div class="qa"><div class="q">Q2 使用场景?</div><div class="a">→ A 自己常用 + B 帮别人/多台机用(不做 U 盘启动盘)</div></div>
+    <div class="qa"><div class="q">Q3 重装方式?</div><div class="a">→ 两档都要:① 重置此电脑 ② 镜像全新装,用时自选</div></div>
+    <div class="qa"><div class="q">Q4 重装后自动干啥?</div><div class="a">→ 系统优化/调设置 + (核心)桌面软件智能还原</div></div>
+    <div class="qa"><div class="q">Q5 桌面还原怎么个还原法?(关键)</div><div class="a">→ 重装前记录桌面有啥,重装后列清单勾选还原,不要的清理;区分软件本体在不在 C 盘</div></div>
+    <div class="qa"><div class="q">Q6 接受"前备份/后还原"两步走吗?</div><div class="a">→ 可以</div></div>
+    <div class="qa"><div class="q">Q7 本体在 C 盘、重装就丢的软件怎么办?</div><div class="a">→ 只红色标记提醒"需重装",不替我装</div></div>
+    <div class="qa"><div class="q">Q8 桌面上自己的文件要不要也备份?</div><div class="a">→ 列出来让我勾选(大文件可跳过)</div></div>
+    <div class="qa"><div class="q">Q9 工具形态?</div><div class="a">→ 带图形界面的窗口(WPF 复选框列表)</div></div>
+    <div class="qa"><div class="q">Q10 放哪?</div><div class="a">→ E:\InstallationTools,含对话记录</div></div>
+  </section>
+
+  <section class="card" id="modules">
+    <h2>④ 模块划分</h2>
+    <p>整个工具拆成 5 个各管一摊、能单独测的模块:</p>
+    <table>
+      <tr><th>模块</th><th>干啥</th><th>关键点</th></tr>
+      <tr><td><strong>1. 桌面扫描器</strong><br><span class="badge blue">备份阶段</span></td>
+        <td>扫描桌面(当前用户 + 公共桌面)所有 <code>.lnk</code> 快捷方式和真实文件,解析每个快捷方式指向的目标路径</td>
+        <td>判断目标在 C 盘还是 D/E 盘;区分快捷方式 vs 真实文件</td></tr>
+      <tr><td><strong>2. 备份器</strong><br><span class="badge blue">备份阶段</span></td>
+        <td>把扫描结果写成清单(JSON),把要备份的快捷方式和文件拷贝到安全位置(D盘/U盘)</td>
+        <td>安全位置不能在 C 盘;大文件让用户勾选;留校验信息</td></tr>
+      <tr><td><strong>3. 重装执行器</strong><br><span class="badge risk">高风险</span></td>
+        <td>提供两档:① 调用系统"重置此电脑";② 引导用镜像全新装</td>
+        <td>重装前强制确认 + 检查备份是否已完成;镜像档复杂,优先把"重置"档做扎实</td></tr>
+      <tr><td><strong>4. 还原器</strong><br><span class="badge ok">还原阶段</span></td>
+        <td>读清单 → WPF 复选框列表 → 用户勾选 → 还原快捷方式和文件;失效项做标记</td>
+        <td>本体在C盘的标红"需重装";校验快捷方式目标是否还在</td></tr>
+      <tr><td><strong>5. 系统优化器</strong><br><span class="badge warn">还原后</span></td>
+        <td>一批可勾选的优化项(关多余自启、显示文件后缀、电源计划等)</td>
+        <td>每项独立可选;只做安全、可逆的;具体项后续细化</td></tr>
+    </table>
+    <div class="callout">主界面就三个大按钮:<strong>【1 备份桌面】</strong> → <strong>【2 重装系统】</strong> → <strong>【3 还原 + 优化】</strong>,顺着点就行。</div>
+  </section>
+
+  <section class="card" id="data">
+    <h2>⑤ 备份数据长啥样</h2>
+    <p>备份清单用一个 JSON 文件记录,大概结构(示意):</p>
+    <table>
+      <tr><th>字段</th><th>含义</th><th>例子</th></tr>
+      <tr><td>name</td><td>图标显示名</td><td>"微信"</td></tr>
+      <tr><td>type</td><td>类型</td><td>shortcut(快捷方式) / file(真实文件)</td></tr>
+      <tr><td>target</td><td>快捷方式指向哪</td><td>D:\Program Files\WeChat\WeChat.exe</td></tr>
+      <tr><td>targetDrive</td><td>本体在哪个盘</td><td>D(能救活) / C(会失效)</td></tr>
+      <tr><td>status</td><td>还原可行性</td><td><span class="badge ok">可还原</span> / <span class="badge risk">需重装</span></td></tr>
+      <tr><td>backupPath</td><td>备份文件存哪了</td><td>E:\InstallationTools\backup\...</td></tr>
+    </table>
+    <div class="callout ok"><strong>好处:</strong>清单和备份文件都在 D/E 盘,重装 C 盘动不到它们,还原时直接读。</div>
+  </section>
+
+  <section class="card" id="risk">
+    <h2>⑥ 风险与兜底</h2>
+    <div class="callout risk"><strong>风险1 · 重装是不可逆的:</strong>一旦重装,C 盘没备份的全没。<br><strong>兜底:</strong>重装按钮加"<strong>是否已完成备份?</strong>"强制确认;没检测到备份清单就拦着不让重装。</div>
+    <div class="callout risk"><strong>风险2 · 镜像全新装复杂且危险:</strong>涉及镜像、引导、分区,容易出事。<br><strong>兜底:</strong>第一版<strong>先把"重置此电脑"档做扎实</strong>,镜像档作为进阶,做好充分提示,甚至第一版先只做引导不全自动。</div>
+    <div class="callout warn"><strong>风险3 · 快捷方式指向的盘符变了:</strong>U 盘/移动硬盘重插后盘符可能变,导致目标找不到。<br><strong>兜底:</strong>只对固定内置磁盘(D/E)判"可还原";还原时再校验一次目标是否真的存在,不在就标记。</div>
+    <div class="callout warn"><strong>风险4 · 备份存到 U 盘但还原时没插:</strong><br><strong>兜底:</strong>还原前检查备份位置在不在,不在就提示插上。</div>
+    <div class="callout ok"><strong>安全原则:</strong>优化项只做<strong>安全、可逆</strong>的;所有破坏性操作(重装、清理)动手前都二次确认。</div>
+  </section>
+
+  <section class="card" id="scope">
+    <h2>⑦ 范围边界(YAGNI · 第一版做啥/不做啥)</h2>
+    <h3>✅ 第一版做</h3>
+    <table>
+      <tr><th>功能</th><th>说明</th></tr>
+      <tr><td>桌面扫描 + 备份</td><td>快捷方式 + 用户勾选的文件,区分本体盘符</td></tr>
+      <tr><td>清单勾选还原</td><td>WPF 复选框列表,还原快捷方式和文件</td></tr>
+      <tr><td>C盘失效软件标记</td><td>红色"需重装",不替你装</td></tr>
+      <tr><td>重装·重置档</td><td>调用系统"重置此电脑",带强制确认</td></tr>
+      <tr><td>系统优化(基础几项)</td><td>显示文件后缀、关多余自启等安全项</td></tr>
+    </table>
+    <h3>🕒 后续再说(第一版先不碰)</h3>
+    <table>
+      <tr><td>重装·镜像全新装(全自动)</td><td>复杂高危,先做引导版或放二期</td></tr>
+      <tr><td>自动重装C盘软件</td><td>你已确认不要,只标记</td></tr>
+      <tr><td>U 盘启动盘 / PE</td><td>明确不做</td></tr>
+      <tr><td>多台机批量配置下发</td><td>"帮别人装"先靠拷工具到对方机器,批量化二期</td></tr>
+    </table>
+    <div class="callout"><strong>下一步:</strong>这份方案你过一遍。<span class="badge ok">认可</span>的话,我就进入"写实现计划"(把每个模块拆成可一步步落地的开发步骤),然后才开始写代码。</div>
+  </section>
+
+</div>
+
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs');
+    m.default.initialize({ startOnLoad:true, theme:'default' });
+  }catch(e){ /* 离线降级:保留文字版关系 */ }
+</script>
+</body>
+</html>

@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>翻译 · 语音小工具</title>
+<style>
+  :root{
+    --bg:#f3f4fb; --card:#ffffff; --ink:#1f2430; --muted:#8a90a3;
+    --line:#e4e6f0; --brand:#5b5ce2; --brand2:#8b5cf6; --brand-soft:#eef0ff;
+    --grad:linear-gradient(135deg,#5b5ce2,#8b5cf6);
+  }
+  *{margin:0; padding:0; box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    font-family:"Microsoft YaHei","PingFang SC",-apple-system,system-ui,sans-serif;
+    background:var(--bg); color:var(--ink); font-size:15px;
+    display:flex; flex-direction:column; overflow:hidden;
+  }
+
+  /* ===== 顶栏：品牌 + 页签 ===== */
+  header{
+    flex:none; display:flex; align-items:center; gap:18px;
+    padding:12px 22px; background:var(--card); border-bottom:1px solid var(--line);
+  }
+  .brand{font-size:16px; font-weight:700; display:flex; align-items:center; gap:8px; white-space:nowrap;}
+  .brand .logo{
+    width:30px; height:30px; border-radius:9px; background:var(--grad);
+    color:#fff; display:flex; align-items:center; justify-content:center; font-size:15px;
+  }
+  .tabs{
+    margin-left:auto; display:flex; background:var(--bg);
+    border-radius:12px; padding:4px; gap:4px;
+  }
+  .tab{
+    border:none; background:transparent; cursor:pointer;
+    padding:8px 22px; border-radius:9px; font-size:14.5px; font-family:inherit;
+    color:#5d6275; transition:all .15s; white-space:nowrap;
+  }
+  .tab:hover{color:var(--brand);}
+  .tab.active{background:var(--grad); color:#fff; font-weight:600; box-shadow:0 3px 10px rgba(91,92,226,.35);}
+
+  /* ===== 页面容器 ===== */
+  main{flex:1; min-height:0; padding:16px 22px 18px;}
+  .page{display:none; height:100%;}
+  .page.active{display:flex; flex-direction:column; gap:12px;}
+
+  select,button{font-family:inherit;}
+  select{
+    font-size:14px; padding:8px 12px; border-radius:10px;
+    border:1px solid var(--line); background:var(--card); cursor:pointer; color:var(--ink);
+  }
+  select:focus,textarea:focus{outline:2px solid var(--brand); border-color:transparent;}
+
+  .btn-main{
+    background:var(--grad); color:#fff; border:none; cursor:pointer;
+    padding:9px 30px; font-size:15px; border-radius:10px; font-weight:600;
+    box-shadow:0 3px 10px rgba(91,92,226,.3); transition:opacity .15s, transform .1s;
+  }
+  .btn-main:hover{opacity:.92;}
+  .btn-main:active{transform:scale(.98);}
+  .btn-main:disabled{opacity:.5; cursor:not-allowed;}
+  .btn-ghost{
+    background:var(--brand-soft); color:var(--brand); border:none; cursor:pointer;
+    padding:8px 16px; border-radius:9px; font-size:13.5px;
+  }
+  .btn-ghost:hover{background:#e1e4ff;}
+
+  .hint{font-size:13px; color:var(--muted);}
+  .hint.err{color:#d33;}
+  .hint.ok{color:#16a34a;}
+  .spin{display:inline-block; animation:r 1s linear infinite;}
+  @keyframes r{to{transform:rotate(360deg);}}
+
+  /* ===== 翻译页：左右双栏 ===== */
+  .lang-bar{flex:none; display:flex; align-items:center; gap:12px;}
+  .lang-bar .arrow{color:var(--muted); font-size:17px;}
+  .panes{flex:1; min-height:0; display:flex; gap:14px;}
+  .pane{
+    flex:1; min-width:0; display:flex; flex-direction:column;
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    overflow:hidden; box-shadow:0 1px 4px rgba(31,36,48,.05);
+  }
+  .pane-label{flex:none; font-size:12.5px; color:var(--muted); letter-spacing:.06em; padding:10px 16px 0;}
+  .pane textarea{
+    flex:1; min-height:0; border:none; resize:none; padding:10px 16px 12px;
+    font-size:16px; line-height:1.8; font-family:inherit; background:transparent;
+  }
+  .pane .result{
+    flex:1; min-height:0; overflow:auto; padding:10px 16px 12px;
+    font-size:16px; line-height:1.8; white-space:pre-wrap;
+    user-select:text; -webkit-user-select:text; cursor:text;
+  }
+  .pane .result::selection{background:#cfd2ff;}
+  .pane .result:empty::before{content:"译文会出现在这里"; color:#b9bdcc;}
+  .pane-foot{
+    flex:none; display:flex; align-items:center; gap:10px;
+    padding:10px 14px; border-top:1px solid var(--line); background:#fbfbfe;
+  }
+  .pane-foot .grow{flex:1;}
+  audio{height:34px;}
+  #trAudio{display:none; width:240px;}
+
+  /* ===== 文字转语音页 ===== */
+  .tts-card{
+    flex:1; min-height:0; display:flex; flex-direction:column;
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    overflow:hidden; box-shadow:0 1px 4px rgba(31,36,48,.05);
+  }
+  .tts-card textarea{flex:1; min-height:0; border:none; resize:none; padding:14px 18px; font-size:16px; line-height:1.8; font-family:inherit;}
+  .tts-bar{
+    flex:none; display:flex; align-items:center; gap:14px; flex-wrap:wrap;
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:14px 18px; box-shadow:0 1px 4px rgba(31,36,48,.05);
+  }
+  .tts-bar label{font-size:14px; color:#5d6275;}
+  input[type=range]{width:150px; accent-color:var(--brand); vertical-align:middle;}
+  .tts-out{flex:none; display:flex; align-items:center; gap:14px; min-height:40px; flex-wrap:wrap;}
+  #ttsAudio{display:none; flex:1; min-width:220px; max-width:420px;}
+  .dl{display:none;}
+
+  /* ===== 设置页 ===== */
+  .set-wrap{flex:1; min-height:0; overflow:auto; display:flex; flex-direction:column; gap:12px; align-items:center;}
+  .set-card{
+    width:100%; max-width:640px; background:var(--card);
+    border:1px solid var(--line); border-radius:14px; box-shadow:0 1px 4px rgba(31,36,48,.05);
+    padding:6px 22px;
+  }
+  .set-row{
+    display:flex; align-items:center; gap:14px; padding:14px 0;
+    border-bottom:1px solid var(--line);
+  }
+  .set-card .set-row:last-child{border-bottom:none;}
+  .set-row .lab{width:150px; flex:none; font-size:14.5px;}
+  .set-row .lab small{display:block; color:var(--muted); font-size:12px; font-weight:400; margin-top:2px;}
+  .set-row select{min-width:230px;}
+  .hotkey-input{
+    font-family:inherit; font-size:14px; padding:8px 12px; border-radius:10px;
+    border:1px solid var(--line); background:var(--card); color:var(--ink);
+    width:210px; cursor:pointer; text-align:center;
+  }
+  .hotkey-input:focus{outline:2px solid var(--brand); border-color:transparent; background:var(--brand-soft);}
+  .switch{position:relative; width:46px; height:25px; flex:none;}
+  .switch input{opacity:0; width:0; height:0;}
+  .switch .knob{
+    position:absolute; inset:0; background:#d6d9e6; border-radius:99px; transition:.2s; cursor:pointer;
+  }
+  .switch .knob::before{
+    content:""; position:absolute; width:19px; height:19px; left:3px; top:3px;
+    background:#fff; border-radius:50%; transition:.2s; box-shadow:0 1px 3px rgba(0,0,0,.2);
+  }
+  .switch input:checked + .knob{background:var(--brand);}
+  .switch input:checked + .knob::before{transform:translateX(21px);}
+  .about{
+    width:100%; max-width:640px; text-align:center;
+    font-size:12.5px; color:var(--muted); line-height:1.9;
+  }
+
+  /* ===== 窄窗口适配 ===== */
+  @media (max-width:760px){
+    body{overflow:auto;}
+    header{flex-wrap:wrap; gap:10px;}
+    .tabs{margin-left:0;}
+    .panes{flex-direction:column;}
+    .pane textarea,.pane .result{min-height:140px;}
+    .set-row{flex-wrap:wrap;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand"><span class="logo">译</span>翻译 · 语音小工具</div>
+  <div class="tabs">
+    <button class="tab active" id="tabTrans">📝 翻译</button>
+    <button class="tab" id="tabTts">🎙️ 文字转语音</button>
+    <button class="tab" id="tabSet">⚙️ 设置</button>
+  </div>
+</header>
+
+<main>
+  <!-- ===== 页签一：翻译 ===== -->
+  <div class="page active" id="pageTrans">
+    <div class="lang-bar">
+      <select id="srcLang"><option value="auto" selected>自动检测语言</option></select>
+      <span class="arrow">➜</span>
+      <select id="dstLang"></select>
+      <button class="btn-ghost" id="btnSnip" title="框选屏幕上任意区域，自动识别文字并翻译">✂️ 截图翻译</button>
+      <span class="hint" id="trHint"></span>
+    </div>
+    <div class="panes">
+      <div class="pane">
+        <div class="pane-label">原文</div>
+        <textarea id="srcText" placeholder="输入或粘贴要翻译的文字…&#10;（Ctrl + 回车 快速翻译）"></textarea>
+        <div class="pane-foot">
+          <button class="btn-ghost" id="btnMic" title="对着麦克风说话，自动变成文字">🎤 语音输入</button>
+          <button class="btn-ghost" id="btnClear">🧹 清空</button>
+          <span class="grow"></span>
+          <button class="btn-main" id="btnTranslate">翻 译</button>
+        </div>
+      </div>
+      <div class="pane">
+        <div class="pane-label">译文</div>
+        <div class="result" id="trResult"></div>
+        <div class="pane-foot">
+          <button class="btn-ghost" id="btnSpeak">🔊 朗读</button>
+          <button class="btn-ghost" id="btnCopy">📋 复制</button>
+          <button class="btn-ghost dl" id="btnTrDownload">⬇️ 下载朗读</button>
+          <span class="grow"></span>
+          <audio id="trAudio" controls></audio>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 页签二：文字转语音 ===== -->
+  <div class="page" id="pageTts">
+    <div class="tts-card">
+      <div class="pane-label">想做成语音的文字</div>
+      <textarea id="ttsText" placeholder="输入文字，支持中文、英文、日语等多种语言…"></textarea>
+    </div>
+    <div class="tts-bar">
+      <label>声音</label>
+      <select id="ttsVoice"></select>
+      <label>语速</label>
+      <input type="range" id="ttsRate" min="-50" max="100" value="0" step="10">
+      <span class="hint" id="rateVal">正常</span>
+      <span style="flex:1"></span>
+      <span class="hint" id="ttsHint"></span>
+      <button class="btn-main" id="btnTts">🎵 生成语音</button>
+    </div>
+    <div class="tts-out">
+      <audio id="ttsAudio" controls></audio>
+      <button class="btn-ghost dl" id="ttsDl">⬇️ 下载 MP3</button>
+      <span style="flex:1"></span>
+      <button class="btn-ghost" id="btnOpenDir">📂 打开语音文件夹</button>
+    </div>
+  </div>
+
+  <!-- ===== 页签三：设置 ===== -->
+  <div class="page" id="pageSet">
+    <div class="set-wrap">
+      <div class="set-card">
+        <div class="set-row">
+          <div class="lab">默认目标语言<small>中文内容翻译成什么；外语内容会自动翻成中文</small></div>
+          <select id="setTarget"></select>
+        </div>
+        <div class="set-row">
+          <div class="lab">翻译引擎<small>「自动」会探测网络：能连谷歌用谷歌，连不上（没开VPN）自动换必应</small></div>
+          <select id="setEngine">
+            <option value="auto">自动（推荐，谷歌↔必应智能切换）</option>
+            <option value="google">谷歌翻译（需要代理/VPN）</option>
+            <option value="bing">必应翻译（国内直连）</option>
+            <option value="mymemory">MyMemory（备用）</option>
+          </select>
+        </div>
+        <div class="set-row">
+          <div class="lab">默认声音<small>朗读和生成语音默认用谁的声音</small></div>
+          <select id="setVoice"></select>
+        </div>
+        <div class="set-row">
+          <div class="lab">默认语速</div>
+          <input type="range" id="setRate" min="-50" max="100" value="0" step="10">
+          <span class="hint" id="setRateVal">正常</span>
+        </div>
+        <div class="set-row">
+          <div class="lab">截图翻译快捷键<small>在任何软件里按下都能直接截图翻译</small></div>
+          <input class="hotkey-input" id="setHotkey" readonly placeholder="点这里，再按下组合键">
+          <button class="btn-ghost" id="btnClearHotkey">不用快捷键</button>
+        </div>
+        <div class="set-row">
+          <div class="lab">截图后弹到主窗口<small>关掉的话，译文直接"贴"回截图原位置显示（像汉化补丁一样）</small></div>
+          <label class="switch"><input type="checkbox" id="setSnipToWindow"><span class="knob"></span></label>
+        </div>
+        <div class="set-row">
+          <div class="lab">划词翻译<small>在任何软件里用鼠标划选文字，旁边弹「译」按钮，点一下出译文</small></div>
+          <label class="switch"><input type="checkbox" id="setSelection"><span class="knob"></span></label>
+        </div>
+        <div class="set-row">
+          <div class="lab">划词时需按住 Ctrl<small>开启后，只有按住 Ctrl 划选才弹按钮，避免误触</small></div>
+          <label class="switch"><input type="checkbox" id="setSelectionCtrl"><span class="knob"></span></label>
+        </div>
+        <div class="set-row">
+          <div class="lab">开机自动启动<small>开电脑后自动打开本软件</small></div>
+          <label class="switch"><input type="checkbox" id="setAutostart"><span class="knob"></span></label>
+        </div>
+        <div class="set-row">
+          <div class="lab">语音保存位置<small>点"下载"时才存到这里；朗读/试听不会存文件</small></div>
+          <div style="flex:1; min-width:0; display:flex; flex-direction:column; gap:8px;">
+            <span class="hint" id="audioDirPath" style="word-break:break-all;">…</span>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button class="btn-ghost" id="btnChooseDir">📁 修改保存位置</button>
+              <button class="btn-ghost" id="btnOpenDir2">📂 打开文件夹</button>
+            </div>
+          </div>
+        </div>
+        <div class="set-row">
+          <span class="grow" style="flex:1"></span>
+          <span class="hint" id="setHint"></span>
+          <button class="btn-main" id="btnSaveSet">💾 保存设置</button>
+        </div>
+      </div>
+      <div class="about">
+        翻译·语音小工具 v1.1 ｜ 翻译：谷歌 / MyMemory 免费接口 ｜ 语音：微软 edge-tts ｜ 截图文字识别：RapidOCR（本地离线）<br>
+        翻译和生成语音需要联网；截图识别完全在本机完成
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+
+// ---------- 页签切换 ----------
+const PAGES = { trans: ["tabTrans", "pageTrans"], tts: ["tabTts", "pageTts"], set: ["tabSet", "pageSet"] };
+function switchTab(name) {
+  for (const [key, [tabId, pageId]] of Object.entries(PAGES)) {
+    $(tabId).classList.toggle("active", key === name);
+    $(pageId).classList.toggle("active", key === name);
+  }
+}
+$("tabTrans").onclick = () => switchTab("trans");
+$("tabTts").onclick = () => switchTab("tts");
+$("tabSet").onclick = () => switchTab("set");
+if (location.hash === "#tts") switchTab("tts");
+if (location.hash === "#set") switchTab("set");
+
+// ---------- 语言与声音清单 ----------
+const LANGS = [
+  ["zh-CN", "中文（简体）"], ["zh-TW", "中文（繁体）"], ["en", "英语"],
+  ["ja", "日语"], ["ko", "韩语"], ["fr", "法语"], ["de", "德语"],
+  ["es", "西班牙语"], ["ru", "俄语"], ["pt", "葡萄牙语"], ["it", "意大利语"],
+  ["vi", "越南语"], ["th", "泰语"], ["ar", "阿拉伯语"]
+];
+const VOICES = [
+  ["中文", [
+    ["zh-CN-XiaoxiaoNeural", "晓晓（普通话·女·自然）"],
+    ["zh-CN-XiaoyiNeural", "晓伊（普通话·女·温柔）"],
+    ["zh-CN-YunxiNeural", "云希（普通话·男·清爽）"],
+    ["zh-CN-YunjianNeural", "云健（普通话·男·浑厚）"],
+    ["zh-TW-HsiaoChenNeural", "曉臻（台湾腔·女）"],
+    ["zh-HK-HiuMaanNeural", "曉曼（粤语·女）"]
+  ]],
+  ["英语", [
+    ["en-US-AriaNeural", "Aria（美式·女）"],
+    ["en-US-GuyNeural", "Guy（美式·男）"],
+    ["en-GB-SoniaNeural", "Sonia（英式·女）"]
+  ]],
+  ["其他语言", [
+    ["ja-JP-NanamiNeural", "Nanami（日语·女）"],
+    ["ko-KR-SunHiNeural", "SunHi（韩语·女）"],
+    ["fr-FR-DeniseNeural", "Denise（法语·女）"],
+    ["de-DE-KatjaNeural", "Katja（德语·女）"],
+    ["es-ES-ElviraNeural", "Elvira（西班牙语·女）"],
+    ["ru-RU-SvetlanaNeural", "Svetlana（俄语·女）"]
+  ]]
+];
+// 翻译结果朗读时，按目标语言自动挑一个合适的声音
+const VOICE_BY_LANG = {
+  "zh-CN": "zh-CN-XiaoxiaoNeural", "zh-TW": "zh-TW-HsiaoChenNeural",
+  "en": "en-US-AriaNeural", "ja": "ja-JP-NanamiNeural", "ko": "ko-KR-SunHiNeural",
+  "fr": "fr-FR-DeniseNeural", "de": "de-DE-KatjaNeural", "es": "es-ES-ElviraNeural",
+  "ru": "ru-RU-SvetlanaNeural", "pt": "pt-BR-FranciscaNeural", "it": "it-IT-ElsaNeural",
+  "vi": "vi-VN-HoaiMyNeural", "th": "th-TH-PremwadeeNeural", "ar": "ar-SA-ZariyahNeural"
+};
+
+const srcSel = $("srcLang"), dstSel = $("dstLang");
+for (const [code, name] of LANGS) {
+  srcSel.add(new Option(name, code));
+  dstSel.add(new Option(name, code));
+  $("setTarget").add(new Option(name, code));
+}
+function fillVoices(sel) {
+  for (const [group, voices] of VOICES) {
+    const og = document.createElement("optgroup");
+    og.label = group;
+    for (const [code, name] of voices) og.appendChild(new Option(name, code));
+    sel.appendChild(og);
+  }
+}
+fillVoices($("ttsVoice"));
+fillVoices($("setVoice"));
+dstSel.value = "en";
+
+async function post(url, body) {
+  const r = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  // 错误响应不一定是 JSON（比如意外的 500 页面），兜底给中文提示
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.error || `请求失败（${r.status}），请重试`);
+  return data;
+}
+
+// ---------- 快捷键录入 ----------
+function formatCombo(combo) {
+  if (!combo) return "";
+  return combo.split("+").map(p => p === "ctrl" ? "Ctrl" : p === "alt" ? "Alt"
+    : p === "shift" ? "Shift" : p === "win" ? "Win" : p.toUpperCase()).join(" + ");
+}
+const hotkeyInput = $("setHotkey");
+hotkeyInput.dataset.combo = "";
+hotkeyInput.addEventListener("keydown", e => {
+  e.preventDefault();
+  if (["Control", "Alt", "Shift", "Meta"].includes(e.key)) return; // 还没按主键
+  const mods = [];
+  if (e.ctrlKey) mods.push("ctrl");
+  if (e.altKey) mods.push("alt");
+  if (e.shiftKey) mods.push("shift");
+  if (e.metaKey) mods.push("win");
+  // 用物理键位 e.code 而不是 e.key：Shift+数字会变成符号、欧洲键盘 AltGr、中文输入法都会把 e.key 搞乱
+  const c = e.code;
+  let k = null;
+  if (/^Key[A-Z]$/.test(c)) k = c[3].toLowerCase();
+  else if (/^Digit[0-9]$/.test(c)) k = c[5];
+  else if (/^F([1-9]|1[0-2])$/.test(c)) k = c.toLowerCase();
+  if (!k) return; // 只支持 字母/数字/F1-F12
+  if (!mods.length) {
+    $("setHint").textContent = "要带上 Ctrl / Alt / Shift 一起按";
+    $("setHint").className = "hint err";
+    return;
+  }
+  $("setHint").textContent = "";
+  hotkeyInput.dataset.combo = mods.concat(k).join("+");
+  hotkeyInput.value = formatCombo(hotkeyInput.dataset.combo);
+});
+$("btnClearHotkey").onclick = () => {
+  hotkeyInput.dataset.combo = "";
+  hotkeyInput.value = "";
+};
+
+// 截图/划词的默认方向：外语→中文；中文为主才用当前选的目标语言
+function smartTargetFor(text) {
+  const compact = text.replace(/\s/g, "");
+  const cjk = (compact.match(/[一-鿿]/g) || []).length;
+  return cjk / Math.max(compact.length, 1) >= 0.25 ? null : "zh-CN";
+}
+
+// 全局快捷键截完图后，后台会调用这两个函数把结果送进页面
+window.snipFromHotkey = text => {
+  switchTab("trans");
+  const t = smartTargetFor(text);
+  if (t) dstSel.value = t;
+  $("srcText").value = text;
+  $("btnTranslate").click();
+};
+window.snipHotkeyError = msg => {
+  switchTab("trans");
+  $("trHint").textContent = msg;
+  $("trHint").className = "hint err";
+};
+
+// ---------- 设置：启动时读取并应用 ----------
+function rateText(v) { return v === 0 ? "正常" : (v > 0 ? `快 ${v}%` : `慢 ${-v}%`); }
+async function loadSettings() {
+  try {
+    const s = await (await fetch("/api/settings")).json();
+    dstSel.value = s.target;
+    $("setTarget").value = s.target;
+    $("setEngine").value = s.engine;
+    $("ttsVoice").value = s.voice;
+    $("setVoice").value = s.voice;
+    $("ttsRate").value = s.rate;
+    $("setRate").value = s.rate;
+    $("rateVal").textContent = rateText(+s.rate);
+    $("setRateVal").textContent = rateText(+s.rate);
+    $("setAutostart").checked = !!s.autostart;
+    $("setSnipToWindow").checked = s.snip_to_window !== false;
+    $("setSelection").checked = !!s.selection_translate;
+    $("setSelectionCtrl").checked = !!s.selection_require_ctrl;
+    $("audioDirPath").textContent = s.audio_dir_effective || "（程序默认文件夹）";
+    hotkeyInput.dataset.combo = s.hotkey || "";
+    hotkeyInput.value = formatCombo(s.hotkey || "");
+    $("btnSnip").title = s.hotkey
+      ? `框选屏幕上任意区域，自动识别文字并翻译（快捷键 ${formatCombo(s.hotkey)}）`
+      : "框选屏幕上任意区域，自动识别文字并翻译";
+  } catch (e) { /* 读不到就用默认值 */ }
+}
+loadSettings();
+
+$("setRate").oninput = () => { $("setRateVal").textContent = rateText(+$("setRate").value); };
+$("btnSaveSet").onclick = async () => {
+  const hint = $("setHint");
+  const btn = $("btnSaveSet");
+  btn.disabled = true;
+  try {
+    const data = await post("/api/settings", {
+      target: $("setTarget").value,
+      engine: $("setEngine").value,
+      voice: $("setVoice").value,
+      rate: +$("setRate").value,
+      autostart: $("setAutostart").checked,
+      hotkey: hotkeyInput.dataset.combo || "",
+      snip_to_window: $("setSnipToWindow").checked,
+      selection_translate: $("setSelection").checked,
+      selection_require_ctrl: $("setSelectionCtrl").checked
+    });
+    // 立即应用到界面
+    dstSel.value = $("setTarget").value;
+    $("ttsVoice").value = $("setVoice").value;
+    $("ttsRate").value = $("setRate").value;
+    $("rateVal").textContent = rateText(+$("setRate").value);
+    hint.textContent = data.note ? `✅ 已保存（${data.note}）` : "✅ 已保存";
+    hint.className = "hint ok";
+    setTimeout(() => { hint.textContent = ""; }, 4000);
+  } catch (e) {
+    hint.textContent = e.message; hint.className = "hint err";
+  } finally {
+    btn.disabled = false;
+  }
+};
+$("btnOpenDir2").onclick = () => fetch("/api/open-audio-dir", { method: "POST" }).catch(() => {});
+$("btnChooseDir").onclick = async () => {
+  const hint = $("setHint");
+  try {
+    const data = await post("/api/choose-audio-dir", {});
+    if (data.cancelled) return;
+    $("audioDirPath").textContent = data.dir;
+    hint.textContent = "✅ 语音保存位置已改";
+    hint.className = "hint ok";
+    setTimeout(() => { hint.textContent = ""; }, 4000);
+  } catch (e) {
+    hint.textContent = e.message; hint.className = "hint err";
+    setTimeout(() => { hint.textContent = ""; }, 5000);
+  }
+};
+
+// ---------- 翻译 ----------
+$("btnTranslate").onclick = async () => {
+  const text = $("srcText").value.trim();
+  const hint = $("trHint");
+  if (!text) { hint.textContent = "请先输入要翻译的内容"; hint.className = "hint err"; return; }
+  const btn = $("btnTranslate");
+  btn.disabled = true;
+  hint.className = "hint";
+  hint.innerHTML = '<span class="spin">⏳</span> 翻译中…';
+  try {
+    const data = await post("/api/translate", {
+      text, source: srcSel.value, target: dstSel.value
+    });
+    $("trResult").textContent = data.translated;
+    hint.textContent = "";
+    // 译文变了，上一段朗读和它的"下载朗读"就失效了，先收起来
+    lastTrTts = null;
+    $("btnTrDownload").style.display = "none";
+    $("trAudio").style.display = "none";
+  } catch (e) {
+    hint.textContent = e.message; hint.className = "hint err";
+  } finally {
+    btn.disabled = false;
+  }
+};
+$("srcText").addEventListener("keydown", e => {
+  if (e.ctrlKey && e.key === "Enter") $("btnTranslate").click();
+});
+$("btnClear").onclick = () => {
+  $("srcText").value = "";
+  $("trResult").textContent = "";
+  $("trAudio").style.display = "none";
+  $("btnTrDownload").style.display = "none";
+  lastTrTts = null;
+  $("trHint").textContent = "";
+  $("srcText").focus();
+};
+
+// ---------- 截图翻译 ----------
+$("btnSnip").onclick = async () => {
+  const hint = $("trHint");
+  const btn = $("btnSnip");
+  btn.disabled = true;
+  hint.className = "hint";
+  hint.innerHTML = '<span class="spin">⏳</span> 请框选屏幕区域（Esc 取消），识别中…';
+  try {
+    const data = await post("/api/snip", {});
+    if (data.cancelled) {
+      hint.textContent = "已取消截图";
+      setTimeout(() => { if (hint.textContent === "已取消截图") hint.textContent = ""; }, 3000);
+      return;
+    }
+    if (data.inplace) { hint.textContent = ""; return; } // 就地贴图翻译：译文已盖回截图位置
+    const t = smartTargetFor(data.text);
+    if (t) dstSel.value = t;
+    $("srcText").value = data.text;
+    hint.textContent = "";
+    $("btnTranslate").click();
+  } catch (e) {
+    hint.textContent = e.message; hint.className = "hint err";
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+// 朗读/试听：从后端拿音频流，在浏览器内存里直接播放，不在语音文件夹留文件
+async function playTts(audioEl, params) {
+  const r = await fetch("/api/tts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(params)
+  });
+  if (!r.ok) {
+    const d = await r.json().catch(() => ({}));
+    throw new Error(d.error || `生成语音失败（${r.status}），请重试`);
+  }
+  const blob = await r.blob();
+  if (audioEl._url) URL.revokeObjectURL(audioEl._url); // 回收上一段，免得内存越积越多
+  audioEl._url = URL.createObjectURL(blob);
+  audioEl.src = audioEl._url;
+  audioEl.style.display = "block";
+  audioEl.play();
+}
+
+// 朗读翻译结果
+let lastTrTts = null; // 记住译文朗读的参数，点"下载朗读"时拿它去保存
+$("btnSpeak").onclick = async () => {
+  const text = $("trResult").textContent;
+  if (!text) return;
+  const btn = $("btnSpeak");
+  btn.disabled = true; btn.textContent = "⏳ 生成中…";
+  try {
+    const voice = VOICE_BY_LANG[dstSel.value] || "zh-CN-XiaoxiaoNeural";
+    const params = { text, voice, rate: 0 };
+    await playTts($("trAudio"), params);
+    lastTrTts = params;
+    $("btnTrDownload").style.display = "inline-block"; // 朗读成功后才出现"下载朗读"
+  } catch (e) {
+    $("trHint").textContent = e.message; $("trHint").className = "hint err";
+  } finally {
+    btn.disabled = false; btn.textContent = "🔊 朗读";
+  }
+};
+
+// 下载朗读：点了才把这段朗读语音存进语音文件夹
+$("btnTrDownload").onclick = async () => {
+  if (!lastTrTts) return;
+  const hint = $("trHint");
+  const btn = $("btnTrDownload");
+  btn.disabled = true; btn.textContent = "⏳ 保存中…";
+  try {
+    const data = await post("/api/save-tts", lastTrTts);
+    hint.textContent = `✅ 已保存到：${data.dir}`;
+    hint.className = "hint ok";
+    setTimeout(() => { if (hint.className === "hint ok") hint.textContent = ""; }, 5000);
+  } catch (e) {
+    hint.textContent = e.message; hint.className = "hint err";
+  } finally {
+    btn.disabled = false; btn.textContent = "⬇️ 下载朗读";
+  }
+};
+
+// 复制结果
+$("btnCopy").onclick = async () => {
+  if (!$("trResult").textContent) return;
+  await navigator.clipboard.writeText($("trResult").textContent);
+  const btn = $("btnCopy");
+  btn.textContent = "✅ 已复制";
+  setTimeout(() => btn.textContent = "📋 复制", 1500);
+};
+
+// ---------- 语音输入（说话转文字） ----------
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+if (!SR) $("btnMic").style.display = "none"; // 内核不支持时直接隐藏
+let recognizing = false, rec = null;
+$("btnMic").onclick = () => {
+  if (!SR) return;
+  if (recognizing) { rec.stop(); return; }
+  rec = new SR();
+  rec.lang = srcSel.value === "auto" ? "zh-CN" : srcSel.value;
+  rec.interimResults = false;
+  rec.continuous = false;
+  rec.onstart = () => {
+    recognizing = true;
+    $("btnMic").textContent = "🔴 正在听，再点一下结束";
+  };
+  rec.onresult = e => {
+    const t = e.results[0][0].transcript;
+    const box = $("srcText");
+    box.value = box.value ? box.value + " " + t : t;
+  };
+  rec.onerror = e => {
+    if (e.error === "not-allowed") {
+      alert("麦克风权限被拒绝了，请允许使用麦克风后再试。");
+    } else if (e.error === "network" || e.error === "service-not-allowed") {
+      $("btnMic").style.display = "none";
+      alert("当前软件窗口不支持语音输入（系统内核限制），其他功能不受影响。");
+    }
+  };
+  rec.onend = () => {
+    recognizing = false;
+    $("btnMic").textContent = "🎤 语音输入";
+  };
+  rec.start();
+};
+
+// ---------- 文字转语音 ----------
+$("ttsRate").oninput = () => { $("rateVal").textContent = rateText(+$("ttsRate").value); };
+
+let lastTts = null; // 记住最近一次试听用的文字/声音/语速，点"下载"时拿它去保存
+$("btnTts").onclick = async () => {
+  const text = $("ttsText").value.trim();
+  const hint = $("ttsHint");
+  if (!text) { hint.textContent = "请先输入文字"; hint.className = "hint err"; return; }
+  const btn = $("btnTts");
+  btn.disabled = true;
+  hint.className = "hint";
+  hint.innerHTML = '<span class="spin">⏳</span> 生成中…';
+  try {
+    const params = { text, voice: $("ttsVoice").value, rate: +$("ttsRate").value };
+    await playTts($("ttsAudio"), params);
+    lastTts = params;
+    $("ttsDl").style.display = "inline-block";
+    hint.textContent = '试听满意后，点"下载 MP3"保存到文件夹';
+    hint.className = "hint";
+  } catch (e) {
+    hint.textContent = e.message; hint.className = "hint err";
+  } finally {
+    btn.disabled = false;
+  }
+};
+
+// 点了下载才真正把语音存进语音文件夹
+$("ttsDl").onclick = async () => {
+  if (!lastTts) return;
+  const hint = $("ttsHint");
+  const btn = $("ttsDl");
+  btn.disabled = true; btn.textContent = "⏳ 保存中…";
+  try {
+    const data = await post("/api/save-tts", lastTts);
+    hint.textContent = `✅ 已保存到：${data.dir}`;
+    hint.className = "hint ok";
+  } catch (e) {
+    hint.textContent = e.message; hint.className = "hint err";
+  } finally {
+    btn.disabled = false; btn.textContent = "⬇️ 下载 MP3";
+  }
+};
+
+$("btnOpenDir").onclick = () => fetch("/api/open-audio-dir", { method: "POST" }).catch(() => {});
+</script>
+</body>
+</html>

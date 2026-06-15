@@ -1,0 +1,526 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>翻译·语音小工具 —— 项目方案</title>
+<style>
+  :root{
+    --bg:#eef1f7; --card:#ffffff; --ink:#1e293b; --muted:#64748b;
+    --line:#e2e8f0; --brand:#4f46e5; --brand2:#8b5cf6; --brand-soft:#eef2ff;
+    --ok:#16a34a; --ok-bg:#e8f9f0; --warn:#d97706; --warn-bg:#fef6e7;
+    --risk:#dc2626; --risk-bg:#fdeeee; --radius:16px;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth; scroll-padding-top:70px;}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"Microsoft YaHei","PingFang SC",-apple-system,system-ui,sans-serif;
+    line-height:1.75; font-size:15.5px;
+  }
+  .wrap{max-width:1020px; margin:0 auto; padding:26px 18px 70px;}
+
+  /* ===== 顶部横幅 ===== */
+  .hero{
+    position:relative; overflow:hidden; color:#fff;
+    background:linear-gradient(120deg,#4338ca 0%,#6d28d9 55%,#9333ea 100%);
+    border-radius:22px; padding:38px 36px 30px; margin-bottom:14px;
+    box-shadow:0 16px 40px rgba(79,70,229,.32);
+  }
+  .hero::before{
+    content:""; position:absolute; inset:0;
+    background:
+      radial-gradient(circle at 85% 15%, rgba(255,255,255,.18), transparent 42%),
+      radial-gradient(circle at 5% 95%, rgba(255,255,255,.10), transparent 38%);
+  }
+  .hero > *{position:relative;}
+  .hero .kicker{font-size:13.5px; letter-spacing:.12em; opacity:.85; margin-bottom:6px;}
+  .hero h1{font-size:30px; line-height:1.3; margin-bottom:10px;}
+  .hero p.lead{font-size:15.5px; opacity:.95; max-width:680px;}
+  .stats{display:flex; flex-wrap:wrap; gap:10px; margin-top:20px;}
+  .stat{
+    background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.25);
+    border-radius:12px; padding:8px 16px; backdrop-filter:blur(4px);
+  }
+  .stat b{font-size:19px; display:block; line-height:1.3;}
+  .stat span{font-size:12.5px; opacity:.85;}
+  .hero .meta{margin-top:18px; font-size:12.5px; opacity:.72;}
+
+  /* ===== 吸顶导航 ===== */
+  nav.bar{
+    position:sticky; top:10px; z-index:50;
+    background:rgba(255,255,255,.92); backdrop-filter:blur(8px);
+    border:1px solid var(--line); border-radius:999px;
+    padding:8px 12px; margin:0 auto 26px; max-width:fit-content;
+    box-shadow:0 6px 18px rgba(15,23,42,.08);
+    display:flex; gap:4px; flex-wrap:wrap; justify-content:center;
+  }
+  nav.bar a{
+    text-decoration:none; color:#475569; font-size:14px;
+    padding:5px 14px; border-radius:999px; white-space:nowrap;
+  }
+  nav.bar a:hover{background:var(--brand-soft); color:var(--brand);}
+
+  /* ===== 通用分区 ===== */
+  section{margin-bottom:34px;}
+  .sec-head{display:flex; align-items:baseline; gap:10px; margin-bottom:14px;}
+  .sec-head .emoji{font-size:22px;}
+  .sec-head h2{font-size:21px;}
+  .sec-head .sub{color:var(--muted); font-size:13.5px;}
+  .card{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:22px 26px; box-shadow:0 1px 3px rgba(15,23,42,.05);
+  }
+
+  .badge{display:inline-block; padding:2px 11px; border-radius:999px; font-size:12.5px; font-weight:600; white-space:nowrap;}
+  .badge.ok{background:var(--ok-bg); color:var(--ok);}
+  .badge.warn{background:var(--warn-bg); color:var(--warn);}
+  .badge.todo{background:var(--brand-soft); color:var(--brand);}
+  .badge.gray{background:#f1f5f9; color:#64748b;}
+
+  /* ===== 进度步骤条 ===== */
+  .stepper{display:flex; gap:0; margin:6px 0 22px;}
+  .step{flex:1; text-align:center; position:relative; padding:0 6px;}
+  .step::before{
+    content:""; position:absolute; top:17px; left:-50%; width:100%; height:3px;
+    background:var(--line); z-index:0;
+  }
+  .step:first-child::before{display:none;}
+  .step.done::before{background:var(--ok);}
+  .step.next::before{background:linear-gradient(90deg,var(--ok),var(--brand));}
+  .step .dot{
+    position:relative; z-index:1; width:36px; height:36px; border-radius:50%;
+    margin:0 auto 8px; display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:15px; color:#fff; background:#cbd5e1;
+    border:3px solid var(--bg);
+  }
+  .step.done .dot{background:var(--ok);}
+  .step.next .dot{background:var(--brand); box-shadow:0 0 0 5px rgba(79,70,229,.18);}
+  .step b{display:block; font-size:14.5px;}
+  .step small{color:var(--muted); font-size:12.5px; display:block; line-height:1.5;}
+
+  .next-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:14px;}
+  .next-card{
+    background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px 20px;
+    border-top:4px solid var(--brand);
+  }
+  .next-card .no{
+    display:inline-flex; width:26px; height:26px; border-radius:8px; background:var(--brand-soft);
+    color:var(--brand); font-weight:700; align-items:center; justify-content:center; font-size:14px; margin-bottom:8px;
+  }
+  .next-card b{display:block; font-size:15.5px; margin-bottom:4px;}
+  .next-card p{font-size:13.5px; color:#475569;}
+
+  /* ===== 功能格子 ===== */
+  .feat-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:14px;}
+  .feat{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:18px 20px; display:flex; gap:14px; align-items:flex-start;
+    transition:transform .15s, box-shadow .15s;
+  }
+  .feat:hover{transform:translateY(-2px); box-shadow:0 8px 20px rgba(15,23,42,.08);}
+  .feat .ic{
+    flex:none; width:44px; height:44px; border-radius:12px; font-size:22px;
+    display:flex; align-items:center; justify-content:center; background:var(--brand-soft);
+  }
+  .feat b{font-size:15.5px; margin-right:8px;}
+  .feat p{font-size:13.5px; color:#475569; margin-top:3px;}
+
+  /* ===== 运作流程图（纯 CSS，离线也能看） ===== */
+  .flow{
+    display:flex; align-items:center; justify-content:center; gap:10px;
+    flex-wrap:nowrap; padding:10px 4px;
+  }
+  .fbox{
+    background:var(--card); border:1.5px solid var(--line); border-radius:14px;
+    padding:12px 16px; text-align:center; min-width:118px;
+    box-shadow:0 2px 6px rgba(15,23,42,.06);
+  }
+  .fbox .fi{font-size:24px; display:block; margin-bottom:2px;}
+  .fbox b{font-size:14px; display:block;}
+  .fbox small{color:var(--muted); font-size:12px; display:block; line-height:1.5;}
+  .fbox.hl{border-color:var(--brand); background:linear-gradient(180deg,#fff,#f5f3ff);}
+  .arr{font-size:22px; color:#94a3b8; flex:none; font-weight:700;}
+  .branch{display:flex; flex-direction:column; gap:10px;}
+  .flow-note{text-align:center; color:var(--muted); font-size:13px; margin-top:10px;}
+
+  /* ===== 技术选型 ===== */
+  .tech-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px;}
+  .tech{
+    background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 20px;
+  }
+  .tech .lab{font-size:12px; color:var(--muted); letter-spacing:.08em;}
+  .tech .pick{font-size:17px; font-weight:700; color:var(--brand); margin:2px 0 6px;}
+  .tech p{font-size:13.5px; color:#475569;}
+  .callout{
+    border-left:4px solid var(--brand); background:var(--brand-soft);
+    padding:12px 18px; border-radius:0 10px 10px 0; margin:16px 0 0; font-size:14px;
+  }
+  .callout.ok{border-color:var(--ok); background:var(--ok-bg);}
+
+  /* ===== 风险卡 ===== */
+  .risk-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(300px,1fr)); gap:14px;}
+  .rk{border-radius:14px; padding:16px 20px; font-size:13.5px; border:1px solid transparent;}
+  .rk b{display:flex; align-items:center; gap:8px; font-size:15px; margin-bottom:6px;}
+  .rk.warn{background:var(--warn-bg); border-color:#f3dfb8;}
+  .rk.risk{background:var(--risk-bg); border-color:#f5c6c6;}
+  .rk.info{background:var(--brand-soft); border-color:#dfe3ff;}
+
+  /* ===== 折叠的开发备忘 ===== */
+  details{
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    margin-bottom:12px; overflow:hidden;
+  }
+  details summary{
+    cursor:pointer; padding:14px 20px; font-weight:600; font-size:15px;
+    list-style:none; display:flex; align-items:center; gap:10px; user-select:none;
+  }
+  details summary::-webkit-details-marker{display:none;}
+  details summary::before{content:"▸"; color:var(--brand); transition:transform .2s;}
+  details[open] summary::before{transform:rotate(90deg);}
+  details .body{padding:2px 22px 18px; border-top:1px dashed var(--line);}
+  code{
+    font-family:Consolas,"Courier New",monospace; font-size:13.5px;
+    background:#f1f5f9; border-radius:6px; padding:2px 6px;
+  }
+  pre.code{
+    font-family:Consolas,"Courier New",monospace; font-size:13.5px;
+    background:#0f172a; color:#e2e8f0; border-radius:10px;
+    padding:14px 18px; overflow:auto; line-height:1.6; margin:10px 0;
+  }
+  .check{list-style:none; margin:8px 0;}
+  .check li{padding:4px 0 4px 28px; position:relative; font-size:14px;}
+  .check li::before{content:"☐"; position:absolute; left:4px; color:var(--brand);}
+  .kv{display:grid; grid-template-columns:120px 1fr; gap:4px 14px; font-size:14px; margin:10px 0;}
+  .kv dt{color:var(--muted);}
+
+  footer{color:var(--muted); font-size:12.5px; text-align:center; margin-top:30px;}
+
+  /* ===== 响应式 ===== */
+  @media (max-width:680px){
+    .hero{padding:26px 22px;}
+    .hero h1{font-size:24px;}
+    .stepper{flex-direction:column; gap:14px;}
+    .step{display:flex; text-align:left; gap:12px; align-items:flex-start;}
+    .step::before{display:none;}
+    .step .dot{margin:0;}
+    .flow{flex-direction:column;}
+    .arr{transform:rotate(90deg);}
+    .kv{grid-template-columns:1fr;}
+  }
+  /* ===== 打印 ===== */
+  @media print{
+    body{background:#fff;}
+    nav.bar{display:none;}
+    .hero{box-shadow:none; -webkit-print-color-adjust:exact; print-color-adjust:exact;}
+    .card,.feat,.tech,.next-card,details{box-shadow:none; break-inside:avoid;}
+    details{border:1px solid var(--line);}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 顶部横幅 -->
+  <header class="hero">
+    <div class="kicker">项目方案 · PROJECT PLAN</div>
+    <h1>🌍 翻译·语音小工具</h1>
+    <p class="lead">一个装在电脑上的翻译软件：能翻译、能把结果<b>念出来</b>、能把任意文字<b>做成 MP3</b>（声音随便挑）。全程免费、不用注册任何账号。</p>
+    <div class="stats">
+      <div class="stat"><b>14 种</b><span>互译语言</span></div>
+      <div class="stat"><b>15 种</b><span>语音声线（可扩到 300+）</span></div>
+      <div class="stat"><b>¥ 0</b><span>使用成本</span></div>
+      <div class="stat"><b>4 / 5</b><span>阶段完成（已可安装使用）</span></div>
+    </div>
+    <div class="meta">更新：2026-06-12 ｜ 位置：E:\chao-tool\TranslationTool ｜ 配套备忘：CLAUDE.md（新开发会话自动加载）</div>
+  </header>
+
+  <!-- 吸顶导航 -->
+  <nav class="bar">
+    <a href="#status">📍 进度</a>
+    <a href="#features">✨ 功能</a>
+    <a href="#arch">⚙️ 怎么运作</a>
+    <a href="#tech">🧩 技术选型</a>
+    <a href="#risks">⚠️ 注意事项</a>
+    <a href="#memo">🔧 开发备忘</a>
+  </nav>
+
+  <!-- 进度 -->
+  <section id="status">
+    <div class="sec-head"><span class="emoji">📍</span><h2>现在到哪了，接下来怎么走</h2></div>
+    <div class="card">
+      <div class="stepper">
+        <div class="step done">
+          <div class="dot">✓</div>
+          <b>网页版原型</b>
+          <small>已完成并实测通过<br>2026-06-12</small>
+        </div>
+        <div class="step done">
+          <div class="dot">✓</div>
+          <b>套独立窗口</b>
+          <small>已完成并实测通过<br>2026-06-12</small>
+        </div>
+        <div class="step done">
+          <div class="dot">✓</div>
+          <b>打包成 exe</b>
+          <small>已完成，31MB<br>实测全功能通过</small>
+        </div>
+        <div class="step done">
+          <div class="dot">✓</div>
+          <b>做成安装包</b>
+          <small>已完成并真实装机验证<br>桌面图标 / 中文向导</small>
+        </div>
+        <div class="step">
+          <div class="dot">5</div>
+          <b>锦上添花</b>
+          <small>300+ 声音、历史记录<br>（可选）</small>
+        </div>
+      </div>
+      <div class="callout ok"><b>2026-06-12 软件已做完并装上了你的电脑：</b>双击桌面上的「翻译·语音小工具」图标就能用。按你的要求，<b>所有东西都集中在项目文件夹里</b>：程序装在 <b>安装好的程序\</b>，生成的 MP3、缓存也都在它下面，C 盘和 D 盘没有任何散落文件。要给别的电脑装，把 <b>安装包\翻译语音小工具-安装包-v1.0.exe</b>（14.6MB）拷过去双击即可。安装→桌面图标→启动→翻译→生成语音，全流程已真实验证。</div>
+      <div class="callout"><b>剩下的阶段 5 是可选项：</b>300+ 全量声音、翻译历史记录、桌面版语音输入替代方案等，用着觉得缺了再说。</div>
+    </div>
+  </section>
+
+  <!-- 功能 -->
+  <section id="features">
+    <div class="sec-head"><span class="emoji">✨</span><h2>功能一览</h2><span class="sub">绿色 = 现在就能用</span></div>
+    <div class="feat-grid">
+      <div class="feat">
+        <div class="ic">📝</div>
+        <div><b>文字翻译</b><span class="badge ok">已完成</span>
+          <p>14 种语言互译：简体中文、繁体中文、英、日、韩、法、德、西、俄、葡、意、越、泰、阿拉伯语。自动识别你输入的是什么语言。</p>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="ic">🔊</div>
+        <div><b>翻译结果朗读</b><span class="badge ok">已完成</span>
+          <p>点一下喇叭，自动用对应语言的声音念出来——翻成日语就用日语女声念。</p>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="ic">🎤</div>
+        <div><b>语音输入</b><span class="badge warn">仅网页版</span>
+          <p>对着麦克风说话自动变文字。桌面版的窗口内核不支持这个功能（按钮会自动隐藏），想用的话用 Edge/Chrome 打开网页版即可。</p>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="ic">🎙️</div>
+        <div><b>文字转语音</b><span class="badge ok">已完成</span>
+          <p>输入文字 → 挑声音 → 调语速 → 生成 MP3，能播放也能下载。现有 15 种声线：普通话 4 种（男女各 2）、台湾腔、粤语、美式英语男女声、英式英语、日/韩/法/德/西/俄各 1 种。</p>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="ic">🖥️</div>
+        <div><b>独立软件窗口</b><span class="badge ok">已完成</span>
+          <p>有自己的程序窗口和图标，不再借浏览器开网页，看起来就是个正经软件。</p>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="ic">📦</div>
+        <div><b>安装包</b><span class="badge ok">已完成</span>
+          <p>双击安装包即装，全中文向导，桌面和开始菜单都有图标，可正常卸载。已真实装机验证。</p>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="ic">✂️</div>
+        <div><b>截图翻译</b><span class="badge ok">已完成 v1.1</span>
+          <p>点按钮或按全局快捷键（默认 Ctrl+Alt+T，可改），框选屏幕上任意有文字的区域，自动识别并翻译。识别用 RapidOCR 在本机完成，不上传截图。</p>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="ic">🖱️</div>
+        <div><b>划词翻译</b><span class="badge ok">已完成 v1.1</span>
+          <p>在任何软件里用鼠标划选文字，旁边弹「译」小按钮，点一下出译文小窗。可选"按住 Ctrl 才弹"防误触。设置里开关。</p>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="ic">⚙️</div>
+        <div><b>软件设置</b><span class="badge ok">已完成 v1.1</span>
+          <p>默认目标语言/声音/语速、翻译引擎切换、自定义截图快捷键、截图后弹主窗口还是就地小窗、划词开关、关闭进托盘后台、开机自启。</p>
+        </div>
+      </div>
+      <div class="feat">
+        <div class="ic">🎁</div>
+        <div><b>更多声音 / 历史记录</b><span class="badge gray">以后再说</span>
+          <p>微软全部 300+ 种声音随便挑、保存翻译历史……用起来觉得缺了再加。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 怎么运作 -->
+  <section id="arch">
+    <div class="sec-head"><span class="emoji">⚙️</span><h2>软件怎么运作</h2><span class="sub">两层结构：看得见的窗口 + 背后干活的小服务</span></div>
+    <div class="card">
+      <div class="flow">
+        <div class="fbox"><span class="fi">👤</span><b>你</b><small>输入文字/说话</small></div>
+        <span class="arr">→</span>
+        <div class="fbox hl"><span class="fi">🖥️</span><b>软件窗口</b><small>pywebview</small></div>
+        <span class="arr">→</span>
+        <div class="fbox hl"><span class="fi">⚙️</span><b>本地小服务</b><small>Flask·只在你电脑里跑</small></div>
+        <span class="arr">→</span>
+        <div class="branch">
+          <div class="fbox"><span class="fi">🌍</span><b>谷歌翻译接口</b><small>返回译文</small></div>
+          <div class="fbox"><span class="fi">🎙️</span><b>微软语音引擎</b><small>edge-tts · 生成 MP3<br>存到 audio_output</small></div>
+        </div>
+      </div>
+      <div class="flow-note">翻译和做语音这两件事分别交给谷歌、微软的<b>免费云服务</b>完成，所以使用时需要联网。</div>
+    </div>
+  </section>
+
+  <!-- 技术选型 -->
+  <section id="tech">
+    <div class="sec-head"><span class="emoji">🧩</span><h2>技术选型与理由</h2><span class="sub">2026-06-12 专门调研后定案，没有特殊原因不推翻</span></div>
+    <div class="tech-grid">
+      <div class="tech">
+        <div class="lab">软件窗口</div>
+        <div class="pick">pywebview</div>
+        <p>给现有网页套一个真正的程序窗口。Windows 11 自带它需要的浏览器内核（WebView2），所以软件只有约 30~60MB（同类 Electron 方案要 150MB+），且现有代码几乎一行不用改。</p>
+      </div>
+      <div class="tech">
+        <div class="lab">后台服务</div>
+        <div class="pick">Flask（沿用）</div>
+        <p>原型已经在用，稳定够用，不折腾。</p>
+      </div>
+      <div class="tech">
+        <div class="lab">翻译引擎</div>
+        <div class="pick">deep-translator</div>
+        <p>走谷歌免费接口，不要账号。万一谷歌连不上，这个库还内置必应、有道等十来个引擎，改一行代码就能切换。</p>
+      </div>
+      <div class="tech">
+        <div class="lab">语音合成</div>
+        <div class="pick">edge-tts</div>
+        <p>就是 Edge 浏览器「大声朗读」用的那套微软声音：自然度高、免费、足足 300+ 种声线可用。</p>
+      </div>
+      <div class="tech">
+        <div class="lab">打包成 exe</div>
+        <div class="pick">PyInstaller（文件夹模式）</div>
+        <p>把 Python 程序打包成普通人能直接运行的样子。特意选「文件夹模式」而非「单文件模式」：比单文件模式启动快好几秒，被杀毒软件误报的概率也低得多。</p>
+      </div>
+      <div class="tech">
+        <div class="lab">安装包</div>
+        <div class="pick">Inno Setup 6.5+</div>
+        <p>免费；官方提供简体中文语言文件，能做出全中文安装向导；桌面快捷方式、开始菜单、卸载程序全自动生成，几十行配置搞定。</p>
+      </div>
+    </div>
+    <div class="callout"><b>被否决的路线：</b>Electron / Tauri（要额外引入两套开发工具链，对这个小项目是杀鸡用牛刀）；Flet（等于界面推倒重写）；继续用浏览器开网页（不像个正经软件）。</div>
+  </section>
+
+  <!-- 注意事项 -->
+  <section id="risks">
+    <div class="sec-head"><span class="emoji">⚠️</span><h2>注意事项与风险</h2></div>
+    <div class="risk-grid">
+      <div class="rk warn">
+        <b>🌐 必须联网才能用</b>
+        翻译靠谷歌、语音靠微软，都是云端免费服务。断网时软件能打开，但翻译和生成语音会失败（界面会提示）。
+      </div>
+      <div class="rk warn">
+        <b>🛡️ 第一次安装可能弹蓝色警告</b>
+        因为没买「代码签名证书」（数百~上千元/年，自用没必要），Windows 可能弹「已保护你的电脑」。点 <b>更多信息 → 仍要运行</b> 即可，是正常现象不是中毒。
+      </div>
+      <div class="rk risk">
+        <b>🚨 杀毒软件可能误报</b>
+        PyInstaller 打包的程序偶尔被杀毒软件冤枉。已选的「文件夹模式」能大幅降低概率；万一还被拦，把安装目录加进杀毒软件的信任名单即可。
+      </div>
+      <div class="rk info">
+        <b>🔌 外部服务的小概率变动</b>
+        ① 谷歌翻译在当前网络连不通时，一行代码切到必应/有道；② 微软偶尔调整语音接口，把 edge-tts 升到最新版即可恢复（旧版可能报 403）。
+      </div>
+    </div>
+  </section>
+
+  <!-- 开发备忘 -->
+  <section id="memo">
+    <div class="sec-head"><span class="emoji">🔧</span><h2>开发备忘</h2><span class="sub">给后续开发会话看的技术细节，平时不用展开</span></div>
+
+    <details>
+      <summary>当前可运行状态 &amp; 项目文件</summary>
+      <div class="body">
+        <dl class="kv">
+          <dt>日常使用</dt><dd>双击桌面「翻译·语音小工具」图标（已安装在项目内 <code>安装好的程序\</code>）</dd>
+          <dt>源码运行</dt><dd>桌面版 <code>venv\Scripts\python.exe desktop.py</code>；网页版 <code>venv\Scripts\python.exe app.py</code> → <code>http://127.0.0.1:8765</code></dd>
+          <dt>重新打包</dt><dd><code>venv\Scripts\pyinstaller.exe --noconfirm TranslationTool.spec</code>，再 <code>cd installer</code> 后 <code>"..\tools\Inno Setup 6\ISCC.exe" /Q setup.iss</code></dd>
+          <dt>翻译接口</dt><dd><code>POST /api/translate</code>，body：<code>{"text","source","target"}</code>（source 可为 "auto"）</dd>
+          <dt>语音接口</dt><dd><code>POST /api/tts</code>，body：<code>{"text","voice","rate"}</code>（rate 为 -50~100 整数百分比），返回 <code>/audio/xxx.mp3</code></dd>
+          <dt>已装依赖</dt><dd>flask、deep-translator、edge-tts（Python 3.12，venv 在项目内；pip 缓存指 <code>D:\pip-cache</code>，别写 C 盘）</dd>
+          <dt>已验证</dt><dd>2026-06-12 端到端实测：网页版、源码桌面版、打包 exe、安装版四种形态的翻译/TTS/界面全部通过；安装版 MP3 写入安装目录自己的 <code>audio_output</code>（按用户要求文件不散落 C 盘）；安装后桌面图标、开始菜单、卸载项齐全。</dd>
+        </dl>
+        <pre class="code">E:\chao-tool\TranslationTool\
+├── app.py                  ← 后台主程序（翻译接口 + 语音接口）
+├── desktop.py              ← 桌面版入口（pywebview 窗口）
+├── static\index.html       ← 界面（翻译区 + 文字转语音区）
+├── app.ico / make_icon.py  ← 软件图标及其生成脚本
+├── TranslationTool.spec    ← PyInstaller 打包配置（onedir、禁 UPX）
+├── installer\setup.iss     ← Inno Setup 安装包配置（UTF-8 BOM）
+├── installer\ChineseSimplified.isl ← 官方中文语言文件
+├── dist\TranslationTool\   ← 打包产物（31MB，含 TranslationTool.exe）
+├── 安装包\翻译语音小工具-安装包-v1.0.exe ← 最终安装包（14.6MB）
+├── 安装好的程序\            ← 软件本体（桌面快捷方式指这里，MP3/缓存也在这）
+├── tools\Inno Setup 6\     ← 打包工具（项目自包含，不装外面）
+├── venv\                   ← Python 运行环境（依赖都在这）
+├── audio_output\           ← 生成的 MP3（安装版存在安装目录的 audio_output）
+├── 启动翻译工具.bat         ← 网页版启动入口（备用，支持语音输入）
+├── 使用说明.txt / CLAUDE.md / 项目方案.html</pre>
+      </div>
+    </details>
+
+    <details>
+      <summary>实测踩过的坑（2026-06-12 开发中新发现，未来改代码必读）</summary>
+      <div class="body">
+        <ul class="check">
+          <li><b>Flask 必须 <code>threaded=True</code></b>：WebView2 会长期占住连接，单线程下其他请求全被堵死（症状：连接被重置、页面打不开）。</li>
+          <li><b>探测本地服务只能用纯 TCP</b>（<code>socket.create_connection</code>），不能用 urllib 等 HTTP 库——本机开着系统代理时 127.0.0.1 的 HTTP 请求会被代理劫持（502/重置）。</li>
+          <li><b>WebView2 有 webkitSpeechRecognition 构造器但服务不可用</b>：桌面版语音输入会静默失败，已在 onerror 里兜底（network/service-not-allowed → 隐藏按钮提示一次）。</li>
+          <li>端口小概率被抢：desktop.py 已做"线程死了就换端口重试（最多 3 次）+ 失败展示错误页"。</li>
+          <li>TTS 文件名已加 uuid 防并发碰撞；写文件前 makedirs 兜底；devnull 兜底带 <code>encoding="utf-8"</code>。</li>
+        </ul>
+      </div>
+    </details>
+
+    <details>
+      <summary>阶段 3 打包检查单（2026-06-12 已照单执行完成）</summary>
+      <div class="body">
+        <ul class="check">
+          <li>入口脚本先 <code>import sys, os</code>，然后在 import flask 之前执行 <code>sys.stdout = sys.stdout or open(os.devnull,'w')</code>（stderr 同理，仅在为 None 时兜底）—— 否则 <code>--noconsole</code> 下 Flask 一打印启动横幅就崩。</li>
+          <li>Flask 实例化用冻结感知路径：<code>base = sys._MEIPASS if getattr(sys,'frozen',False) else 文件所在目录</code>，显式传 <code>static_folder</code> —— 否则打包后白屏（最常见症状）。</li>
+          <li><code>audio_output</code> 等要写入的目录：跟着程序自己走（exe 同目录），写不进去（如 Program Files）才退 <code>%LOCALAPPDATA%</code>；绝不能写 _MEIPASS 临时目录。本项目装用户级 D 盘目录，可直接写。</li>
+          <li>冻结后必须 <code>app.run(debug=False, use_reloader=False)</code> —— reloader 会让 exe 无限自我复制进程。</li>
+          <li>用 onedir 模式，<b>禁用 onefile、禁用 UPX</b>（杀软误报重灾区，onefile 还拖慢启动）。</li>
+          <li>升级到最新 <code>pyinstaller</code> + <code>pyinstaller-hooks-contrib</code>（certifi / webview 官方 hooks 都在 contrib 里，edge-tts 的 SSL 证书自动打包，无需手动处理）。</li>
+          <li>Python 3.12 + pywebview 需要 <code>pythonnet&gt;=3.0</code>；spec 里用 <code>datas=[('static','static')]</code> 元组加资源（避开 --add-data 分隔符平台差异）。</li>
+          <li>日志写到 <code>%LOCALAPPDATA%</code> 下的文件（--noconsole 后看不到控制台）；调试期先打带控制台的包验证，再切 --noconsole。</li>
+        </ul>
+      </div>
+    </details>
+
+    <details>
+      <summary>阶段 4 安装包要点（2026-06-12 已执行完成，Inno Setup 在项目 tools\Inno Setup 6）</summary>
+      <div class="body">
+        <ul class="check">
+          <li>Inno Setup 6.5+（免费）装在项目 <code>tools\Inno Setup 6</code>（用户要求项目自包含）；[Languages] 用官方仓库 Unofficial 目录的 <code>ChineseSimplified.isl</code>（版本要和 Inno 匹配）。</li>
+          <li>.iss 关键段：[Setup] 固定 GUID 的 AppId、<code>PrivilegesRequired=lowest</code>（按用户安装免 UAC 弹窗）、<code>WizardStyle=modern</code>；[Files] 用 <code>Source: "dist\翻译语音工具\*"; Flags: recursesubdirs createallsubdirs</code> 把<b>整个 onedir 文件夹连 _internal 全部打进去</b>（漏子目录是最常见错误）；[Icons] 开始菜单 + 桌面（挂 Tasks: desktopicon 供勾选）；[Run] 装完可选立即启动。</li>
+          <li>.iss 含中文必须存成 <b>UTF-8 带 BOM</b>，否则安装界面乱码。</li>
+          <li>Win11 自带 WebView2 运行时；要兼容老 Win10 可在安装器里检测注册表并附微软 2MB 引导器静默补装（本机 Win11，暂不需要）。</li>
+        </ul>
+      </div>
+    </details>
+
+    <details>
+      <summary>环境与用户约定</summary>
+      <div class="body">
+        <dl class="kv">
+          <dt>项目根目录</dt><dd><code>E:\chao-tool\TranslationTool</code></dd>
+          <dt>本机环境</dt><dd>Windows 11 Pro，Python 3.12.10（系统级），项目用自带 venv</dd>
+          <dt>用户偏好</dt><dd>非技术用户：回复一律简体中文大白话，术语跟通俗解释；安装落盘默认 D/E 盘，严禁随意写 C 盘，装前先报完整路径。</dd>
+        </dl>
+      </div>
+    </details>
+  </section>
+
+  <footer>
+    本文档由 Claude 整理于 2026-06-12 ｜ E:\chao-tool\TranslationTool\项目方案.html ｜ 项目状态变化时应同步更新本文档与 CLAUDE.md
+  </footer>
+
+</div>
+</body>
+</html>

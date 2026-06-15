@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="zh"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>文件互传</title>
+<link rel="stylesheet" href="mobile.css">
+</head><body>
+<header><span class="logo">◈</span> 文件互传 <span id="host"></span></header>
+<main>
+  <section class="card">
+    <div class="ct">发文件到电脑</div>
+    <label class="filebtn" id="filelabel">📎 点这里选择文件
+      <input type="file" id="picker" multiple hidden>
+    </label>
+    <div id="picked" class="picked"></div>
+    <button id="sendBtn" class="send">发送</button>
+  </section>
+  <section class="card">
+    <div class="ct">传输任务</div>
+    <ul id="tasks"><li class="empty">还没有任务</li></ul>
+  </section>
+</main>
+<script src="mobile.js"></script>
+</body></html>

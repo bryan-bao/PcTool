@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>APK 一键安装工具 · 完整使用文档</title>
+<style>
+  :root{
+    --bg:#f5f7fa; --card:#ffffff; --ink:#1f2933; --muted:#6b7280;
+    --line:#e5e7eb; --brand:#2563eb; --brand-soft:#eff6ff;
+    --ok:#16a34a; --ok-bg:#ecfdf5; --warn:#d97706; --warn-bg:#fffbeb;
+    --risk:#dc2626; --risk-bg:#fef2f2; --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Microsoft YaHei","PingFang SC",-apple-system,system-ui,sans-serif;
+    line-height:1.8; font-size:16px;}
+  .wrap{max-width:960px; margin:0 auto; padding:32px 20px 90px;}
+  header.doc{background:linear-gradient(135deg,var(--brand),#4f46e5);
+    color:#fff; border-radius:var(--radius); padding:30px 34px; margin-bottom:22px;
+    box-shadow:0 10px 30px rgba(37,99,235,.25);}
+  header.doc h1{margin:0 0 8px; font-size:28px;}
+  header.doc .meta{opacity:.92; font-size:14px;}
+  nav.toc{background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:16px 20px; margin-bottom:22px; position:sticky; top:10px; z-index:5;}
+  nav.toc strong{display:block; margin-bottom:8px; color:var(--muted); font-size:13px;}
+  nav.toc a{display:inline-block; margin:4px 10px 4px 0; padding:5px 12px; border-radius:999px;
+    background:var(--brand-soft); color:var(--brand); text-decoration:none; font-size:14px;}
+  nav.toc a:hover{background:var(--brand); color:#fff;}
+  section.card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:24px 28px; margin-bottom:18px; box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  section.card h2{margin:0 0 14px; font-size:21px; display:flex; align-items:center; gap:8px; scroll-margin-top:90px;}
+  section.card h2::before{content:""; width:5px; height:22px; background:var(--brand); border-radius:3px;}
+  h3{font-size:16px; margin:18px 0 6px; color:#374151;}
+  .badge{display:inline-block; padding:2px 10px; border-radius:999px; font-size:13px; font-weight:600;}
+  .badge.ok{background:var(--ok-bg); color:var(--ok);}
+  .badge.warn{background:var(--warn-bg); color:var(--warn);}
+  .badge.risk{background:var(--risk-bg); color:var(--risk);}
+  .badge.info{background:var(--brand-soft); color:var(--brand);}
+  .callout{border-left:4px solid var(--brand); background:var(--brand-soft);
+    padding:12px 16px; border-radius:0 8px 8px 0; margin:12px 0;}
+  .callout.risk{border-color:var(--risk); background:var(--risk-bg);}
+  .callout.ok{border-color:var(--ok); background:var(--ok-bg);}
+  .callout.warn{border-color:var(--warn); background:var(--warn-bg);}
+  ol,ul{margin:8px 0; padding-left:24px;}
+  li{margin:6px 0;}
+  table{width:100%; border-collapse:collapse; margin:12px 0; font-size:15px;}
+  th,td{border:1px solid var(--line); padding:10px 12px; text-align:left; vertical-align:top;}
+  th{background:#f9fafb; color:var(--muted);}
+  code{background:#f1f5f9; padding:2px 7px; border-radius:5px; font-size:14px; color:#b91c1c;}
+  pre.code{background:#0f172a; color:#e2e8f0; border-radius:10px; padding:14px 16px; overflow:auto; font-size:14px; line-height:1.6;}
+  pre.code .c{color:#64748b;}
+  .step{display:flex; gap:14px; align-items:flex-start; margin:14px 0;}
+  .num{flex:0 0 34px; height:34px; border-radius:50%; background:var(--brand); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-weight:700; font-size:16px;}
+  .step .t{flex:1;}
+  .diagram{background:#fafbfc; border:1px dashed var(--line); border-radius:10px; padding:16px; text-align:center; overflow:auto;}
+  .tree{font-family:Consolas,monospace; font-size:14px; line-height:1.7; background:#16181d; color:#d7dde6; border-radius:10px; padding:16px 18px; overflow:auto;}
+  .tree .d{color:#7dd3fc;} .tree .x{color:#86efac;} .tree .n{color:#9aa4b2;}
+  @media (max-width:600px){.wrap{padding:20px 14px;} header.doc{padding:22px;} section.card{padding:18px;} nav.toc{position:static;}}
+  @media print{body{background:#fff;} header.doc{box-shadow:none;-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+    nav.toc{display:none;} section.card{break-inside:avoid; box-shadow:none;} pre.code{white-space:pre-wrap;}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="doc">
+    <h1>📱 APK 一键安装工具 · 完整使用文档</h1>
+    <div class="meta">把电脑里的 APK 安装包,一键装到安卓手机 · 支持 USB / WiFi · 自带 adb,发给别人即用</div>
+  </header>
+
+  <nav class="toc">
+    <strong>目录(点击跳转)</strong>
+    <a href="#intro">一、这是什么</a>
+    <a href="#enduser">二、最终用户怎么用</a>
+    <a href="#phone">三、手机端设置</a>
+    <a href="#wifi">四、WiFi 连接</a>
+    <a href="#dev">五、自己运行(开发)</a>
+    <a href="#pack">六、打包成 exe</a>
+    <a href="#share">七、发给别人</a>
+    <a href="#struct">八、项目结构</a>
+    <a href="#how">九、技术原理</a>
+    <a href="#faq">十、常见问题</a>
+  </nav>
+
+  <!-- 一 -->
+  <section class="card" id="intro">
+    <h2>一、这是什么</h2>
+    <p>一个 Windows 上的图形界面小工具。把安卓安装包(<code>.apk</code> 文件)拖进窗口、选好手机、点一下「安装」,它就在背后通过 <code>ADB</code>(安卓官方调试工具)自动把 App 装进手机,<strong>不用在手机上手动点确认</strong>。</p>
+    <div class="callout ok"><strong>核心卖点:</strong>软件把 adb 和运行环境都打包进去了。发给别人时,对方<strong>不用装 Python、不用装 adb、不用下载任何东西</strong>,双击就能开。</div>
+    <table>
+      <tr><th>项目</th><th>说明</th></tr>
+      <tr><td>支持系统</td><td>电脑端:Windows 10/11;手机端:<strong>安卓</strong>(iPhone 不支持)</td></tr>
+      <tr><td>连接方式</td><td>USB 数据线 <span class="badge ok">最稳</span> / WiFi 无线调试(安卓 11+)</td></tr>
+      <tr><td>能干啥</td><td>选一个 APK,一键自动安装(覆盖安装,可更新同款 App)</td></tr>
+      <tr><td>暂不支持</td><td>批量安装、卸载管理、文件互传、蓝牙</td></tr>
+    </table>
+    <div class="callout warn"><strong>为啥不用蓝牙?</strong>安卓"自动安装"只能靠 adb,而 adb 只支持 USB 和 WiFi,<strong>不支持蓝牙</strong>。蓝牙只能传文件、还得手动点装,做不到全自动,所以没采用。</div>
+  </section>
+
+  <!-- 二 -->
+  <section class="card" id="enduser">
+    <h2>二、最终用户怎么用 <span class="badge info">拿到软件的人看这里</span></h2>
+    <div class="step"><div class="num">1</div><div class="t"><strong>整个文件夹一起拷。</strong>软件是一整个文件夹(里面有 exe 和一个 <code>_internal</code> 文件夹)。<strong>不能只留 exe</strong>,旁边的 <code>_internal</code> 少了就打不开。</div></div>
+    <div class="step"><div class="num">2</div><div class="t"><strong>双击</strong> <code>APK一键安装工具.exe</code>。</div></div>
+    <div class="step"><div class="num">3</div><div class="t">第一次打开,Windows 可能弹「<strong>已保护你的电脑</strong>」。点「<strong>更多信息</strong>」→「<strong>仍要运行</strong>」。<span class="badge ok">不是病毒</span>(只是没买数字签名)。</div></div>
+    <div class="step"><div class="num">4</div><div class="t">手机插上电脑、开好 USB 调试(见<a href="#phone">第三节</a>)。</div></div>
+    <div class="step"><div class="num">5</div><div class="t">软件里点「<strong>🔄 刷新</strong>」→ 小圆点变<strong style="color:#16a34a">绿</strong>、出现手机型号 → <strong>拖入 APK</strong> → 点绿色「<strong>⬇ 安装</strong>」→ 等几秒看到「<strong style="color:#16a34a">✓ 安装成功</strong>」。</div></div>
+
+    <div class="diagram" style="margin-top:14px;">
+      <pre class="mermaid">
+flowchart LR
+  A[整个文件夹拷过来] --> B[双击 exe<br/>过 Windows 拦截]
+  B --> C[手机插线<br/>开 USB 调试]
+  C --> D[点刷新<br/>圆点变绿]
+  D --> E[拖入 APK]
+  E --> F[点 安装]
+  F --> G[手机自动装好]
+      </pre>
+      <noscript>流程:拷文件夹 → 双击exe过拦截 → 手机插线开调试 → 刷新变绿 → 拖APK → 点安装 → 装好</noscript>
+    </div>
+
+    <h3>界面上的颜色提示</h3>
+    <table>
+      <tr><th>看到啥</th><th>意思</th></tr>
+      <tr><td>圆点 <span style="color:#5b6472">●</span> 灰色</td><td>还没连上手机</td></tr>
+      <tr><td>圆点 <span style="color:#16a34a">●</span> 绿色</td><td>手机已连上、已授权,可以装了</td></tr>
+      <tr><td>圆点 <span style="color:#d97706">●</span> 黄色</td><td>检测到手机但没授权,去手机上点「允许调试」</td></tr>
+      <tr><td>底部 <span style="color:#16a34a">✓ 绿字</span></td><td>操作成功</td></tr>
+      <tr><td>底部 <span style="color:#dc2626">✗ 红字</span></td><td>失败,字里会写明原因</td></tr>
+    </table>
+  </section>
+
+  <!-- 三 -->
+  <section class="card" id="phone">
+    <h2>三、手机端设置(开 USB 调试) <span class="badge warn">只需设一次</span></h2>
+    <p>这是<strong>安卓系统的硬性要求</strong>,任何这类工具都绕不开。不同品牌叫法略有不同,大致流程:</p>
+    <div class="step"><div class="num">1</div><div class="t">「<strong>设置 → 关于手机</strong>」,找到「<strong>版本号</strong>」,<strong>连点 7 下</strong>,提示「已进入开发者模式」。</div></div>
+    <div class="step"><div class="num">2</div><div class="t">回到设置,「<strong>系统 → 开发者选项</strong>」(有的藏在「更多设置」「其他设置」里),打开「<strong>USB 调试</strong>」。</div></div>
+    <div class="step"><div class="num">3</div><div class="t">用<strong>数据线</strong>连电脑,手机弹「<strong>是否允许 USB 调试</strong>」时,勾「一律允许」并点确定。</div></div>
+    <div class="callout risk"><strong>电脑认不到手机?</strong> ① 换条好点的数据线(有些线只能充电不能传数据);② 确认 USB 调试已开;③ 手机的授权弹窗有没有点允许;④ 极少数手机(某些国产牌子)要装品牌 USB 驱动,去官网搜「型号 + USB 驱动」。</div>
+  </section>
+
+  <!-- 四 -->
+  <section class="card" id="wifi">
+    <h2>四、WiFi 无线连接(可选)</h2>
+    <p>不想插线时用。要求:<strong>手机和电脑连同一个 WiFi</strong>,且手机安卓 11 及以上。</p>
+    <div class="step"><div class="num">1</div><div class="t">手机「开发者选项 → <strong>无线调试</strong>」打开。</div></div>
+    <div class="step"><div class="num">2</div><div class="t">点进「无线调试 → <strong>使用配对码配对设备</strong>」,记下显示的 <strong>IP 地址、端口、配对码</strong>。</div></div>
+    <div class="step"><div class="num">3</div><div class="t">软件切到「<strong>WiFi</strong>」标签,填入 IP、配对端口、配对码;「连接端口」填无线调试主页面显示的那个端口。</div></div>
+    <div class="step"><div class="num">4</div><div class="t">点「<strong>配对并连接</strong>」。连上后,拖 APK、点安装的步骤和插线时完全一样。</div></div>
+    <div class="callout warn">配对端口和连接端口是<strong>两个不同的端口</strong>:配对码页面那个是「配对端口」,无线调试主页面那个是「连接端口」。嫌麻烦直接用数据线最省事。</div>
+  </section>
+
+  <!-- 五 -->
+  <section class="card" id="dev">
+    <h2>五、自己运行(开发 / 本地用) <span class="badge info">需要本机装了 Python</span></h2>
+    <h3>方式一:双击 bat</h3>
+    <p>双击项目里的 <code>启动工具.bat</code> 即可弹出窗口。</p>
+    <h3>方式二:命令行</h3>
+    <pre class="code"><span class="c"># 第一次先装依赖</span>
+pip install -r requirements.txt
+<span class="c"># 启动</span>
+python run.py</pre>
+    <h3>跑测试</h3>
+    <pre class="code">python -m pytest -v   <span class="c"># 共 17 个单元测试</span></pre>
+    <div class="callout">开发期就算没把官方 adb 放进 <code>platform-tools\</code>,程序也会自动用你系统里已装的 adb,照样能跑。</div>
+  </section>
+
+  <!-- 六 -->
+  <section class="card" id="pack">
+    <h2>六、打包成独立 exe</h2>
+    <h3>最省事:双击 bat</h3>
+    <p>双击项目里的 <code>打包成exe.bat</code>,自动装 PyInstaller 并打包,完成后成品在 <code>dist\APK一键安装工具\</code>。</p>
+    <h3>手动命令</h3>
+    <pre class="code">pip install pyinstaller
+python -m PyInstaller --noconfirm --clean --windowed ^
+  --name "APK一键安装工具" ^
+  --add-data "platform-tools;platform-tools" ^
+  run.py</pre>
+    <div class="callout warn"><strong>打包前务必先放官方 adb!</strong>把 <code>adb.exe</code>、<code>AdbWinApi.dll</code>、<code>AdbWinUsbApi.dll</code> 放进项目的 <code>platform-tools\</code> 文件夹(官方下载见<a href="#how">第九节</a>),否则打出来的 exe 在别人电脑上会因为没有 adb 而用不了。</div>
+    <h3>想打成单个 exe 文件(可选)</h3>
+    <p>把上面的 <code>--windowed</code> 换成 <code>--windowed --onefile</code>,就只生成一个 exe 文件,不用拷整个文件夹。代价:每次启动慢两三秒、更容易被杀软误报。</p>
+  </section>
+
+  <!-- 七 -->
+  <section class="card" id="share">
+    <h2>七、发给别人</h2>
+    <ol>
+      <li>进 <code>dist\APK一键安装工具\</code> 文件夹。</li>
+      <li>把<strong>整个文件夹</strong>(连同 <code>使用说明.html</code> 一起)压成一个 <code>.zip</code>。</li>
+      <li>发给对方,对方解压后双击 exe 即用。</li>
+    </ol>
+    <div class="callout risk"><strong>千万别只发单个 exe!</strong>exe 旁边的 <code>_internal</code> 文件夹装着 adb 和全部依赖,缺了就闪退打不开。</div>
+    <div class="callout"><strong>记得告诉对方两件事:</strong>① 第一次打开要点「更多信息 → 仍要运行」过 Windows 拦截;② 手机要先开 USB 调试。这些 <code>使用说明.html</code> 里都写了,让对方先看那个。</div>
+  </section>
+
+  <!-- 八 -->
+  <section class="card" id="struct">
+    <h2>八、项目结构</h2>
+    <div class="tree">FileTransferTools/
+├── <span class="d">apk_installer/</span>          <span class="n"># 源代码</span>
+│   ├── adb_wrapper.py      <span class="n"># 封装所有 adb 调用(找adb/列设备/配对/连接/安装)</span>
+│   ├── error_messages.py   <span class="n"># 把 adb 英文报错翻译成中文</span>
+│   ├── ui.py               <span class="n"># 深色现代风图形界面</span>
+│   └── main.py             <span class="n"># 程序入口</span>
+├── <span class="d">tests/</span>                 <span class="n"># 17 个单元测试</span>
+├── <span class="d">platform-tools/</span>        <span class="n"># 放官方 adb.exe + 两个 dll(随程序打包)</span>
+├── <span class="d">docs/</span>                  <span class="n"># 设计文档 / 实施计划</span>
+├── <span class="d">dist/</span>                  <span class="n"># 打包产物(发给别人的成品)</span>
+├── <span class="x">run.py</span>                 <span class="n"># 启动入口</span>
+├── <span class="x">启动工具.bat</span>           <span class="n"># 双击本地运行(需装 Python)</span>
+├── <span class="x">打包成exe.bat</span>          <span class="n"># 双击打包成 exe</span>
+├── <span class="x">requirements.txt</span>       <span class="n"># 依赖清单</span>
+└── <span class="x">README.md</span></div>
+    <p>代码分四块,各管一摊、互不纠缠:界面只负责显示和收集输入,真正干活(调 adb)都交给 <code>adb_wrapper</code>;所有命令在后台线程跑,所以装东西时界面不会卡死。</p>
+  </section>
+
+  <!-- 九 -->
+  <section class="card" id="how">
+    <h2>九、技术原理(想了解的看)</h2>
+    <h3>它到底怎么装上去的</h3>
+    <p>点「安装」后,程序在后台执行这条命令:</p>
+    <pre class="code">adb -s &lt;手机序列号&gt; install -r "&lt;APK路径&gt;"</pre>
+    <p><code>-r</code> 表示覆盖安装(reinstall),所以能用来更新已装的同款 App。命令的输出被实时抓回来显示在日志框里,成功会有 <code>Success</code>,失败会带个错误码,程序把错误码翻译成中文提示。</p>
+    <h3>adb 从哪来</h3>
+    <p>程序优先用项目 <code>platform-tools\</code> 里随附的 <code>adb.exe</code>;找不到才回退用系统 PATH 里的 adb。官方下载地址:</p>
+    <pre class="code">https://developer.android.com/tools/releases/platform-tools</pre>
+    <p>解压后把 <code>adb.exe</code>、<code>AdbWinApi.dll</code>、<code>AdbWinUsbApi.dll</code> 三个文件放进 <code>platform-tools\</code> 即可。</p>
+    <h3>为什么界面不卡</h3>
+    <p>adb 命令可能要跑几秒,如果在主线程跑,窗口会卡成"转圈圈"。所以所有 adb 调用都丢到<strong>后台线程</strong>执行,结果通过一个线程安全的队列回传给界面刷新。</p>
+  </section>
+
+  <!-- 十 -->
+  <section class="card" id="faq">
+    <h2>十、常见问题</h2>
+    <table>
+      <tr><th>情况</th><th>原因 / 解决</th></tr>
+      <tr><td>双击没反应 / 闪退</td><td>多半只拷了 exe、没带 <code>_internal</code>。把<strong>整个文件夹</strong>重拷。</td></tr>
+      <tr><td>弹「Windows 已保护你的电脑」</td><td>正常,点「更多信息 → 仍要运行」。没买签名而已。</td></tr>
+      <tr><td>杀毒软件报警</td><td>PyInstaller 打的 exe 偶被误报,加白名单即可。</td></tr>
+      <tr><td>刷新后圆点不变绿 / 找不到手机</td><td>检查数据线、USB 调试是否开、授权弹窗是否点允许;个别手机要装 USB 驱动。</td></tr>
+      <tr><td>圆点黄色</td><td>检测到手机但没授权,手机上点「允许此电脑调试」。</td></tr>
+      <tr><td>签名不一致,请先卸载</td><td>手机上已有同名但来源不同的 App,先卸载旧的再装。</td></tr>
+      <tr><td>不能安装更低版本</td><td>手机上版本更新,先卸载手机上的再装。</td></tr>
+      <tr><td>WiFi 连不上</td><td>确认手机电脑同一 WiFi、安卓 11+、配对端口和连接端口没填反。</td></tr>
+      <tr><td>开发时 <code>ModuleNotFoundError</code></td><td>没装依赖,先 <code>pip install -r requirements.txt</code>。</td></tr>
+    </table>
+    <div class="callout ok"><strong>排查万能招:</strong>看软件底部日志框那行中文提示,基本一看就知道卡在哪。</div>
+  </section>
+
+</div>
+
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs');
+    m.default.initialize({ startOnLoad:true, theme:'default' });
+  }catch(e){ /* 没网也不影响文字阅读 */ }
+</script>
+</body>
+</html>

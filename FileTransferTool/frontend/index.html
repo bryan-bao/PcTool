@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="zh">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>局域网文件传输</title>
+</head>
+<body>
+  <div id="app">
+    <aside>
+      <div class="brand"><span class="logo">◈</span> 文件互传</div>
+
+      <div class="card glow">
+        <div class="card-title">扫码连手机</div>
+        <div class="qr-wrap"><img id="qr" alt="二维码"></div>
+        <p id="url" class="mono"></p>
+        <button id="copyurl" class="btn-sm">📋 复制网址</button>
+        <p class="hint">手机扫码,或把网址发给别人用浏览器打开</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title">全局限速</div>
+        <select id="preset">
+          <option value="0">🚀 全速</option>
+          <option value="10485760">⚖ 普通 (10MB/s)</option>
+          <option value="1048576">🐢 省流 (1MB/s)</option>
+        </select>
+      </div>
+
+      <div class="card">
+        <div class="card-title">接收保存到</div>
+        <p id="savedir" class="mono small"></p>
+        <div class="btnrow">
+          <button id="opendir" class="btn-sm">📂 打开文件夹</button>
+          <button id="changedir" class="btn-sm">📁 更改位置</button>
+        </div>
+      </div>
+    </aside>
+
+    <main>
+      <section>
+        <div class="sec-title">传输任务</div>
+        <div id="tasks"><p class="empty">还没有任务。手机扫码、或在下面给某台电脑发文件。</p></div>
+      </section>
+
+      <section>
+        <div class="sec-title">发文件链接 <button id="mkadd" class="btn-accent">＋ 添加文件/文件夹</button></div>
+        <p class="muted small">加进来的文件/文件夹共用下面这一个链接。把链接发给对方(微信/QQ/邮件都行),对方浏览器打开是个下载页,想下哪个点哪个(文件夹整个打包成 zip)。下载期间本程序要开着;不在同一 WiFi 就两边连好 Tailscale、用「远程链接」。</p>
+        <div id="sharebox" class="hidden">
+          <div class="sharebar">
+            <span id="shareurl" class="mono small lnk"></span>
+            <button id="cpLan" class="btn-sm">📋 复制链接</button>
+            <button id="cpTs" class="btn-sm hidden">🌐 复制远程链接</button>
+          </div>
+          <ul id="shareitems"></ul>
+        </div>
+      </section>
+
+      <section>
+        <div class="sec-title">局域网电脑 <button id="scan" class="btn-sm">扫描</button></div>
+        <ul id="peers"><li class="muted">点「扫描」找同一网络里开着本程序的电脑</li></ul>
+        <div id="sendbar" class="sendbar hidden">
+          <span>发往 <b id="selpeer"></b></span>
+          <button id="sendfiles" class="btn-accent">选文件/文件夹发送</button>
+        </div>
+      </section>
+
+      <section>
+        <div class="sec-title">远程发送 <span class="tag">配合 Tailscale</span></div>
+        <p class="muted small">远程传输需要 Tailscale。<button id="instTS" class="btn-sm">⬇ 一键安装 Tailscale</button></p>
+        <p id="tsmsg" class="tsmsg small"></p>
+        <p class="note small">⚠ 两台电脑都要装 Tailscale,并且登录<b>同一个账号</b>,才能互相找到、远程传输。</p>
+        <p class="muted small">装好后填对方的地址即可远程发送。本机地址:<b id="myaddr" class="mono">—</b></p>
+        <div class="manual">
+          <input id="mhost" placeholder="对方 IP 或 Tailscale 地址(如 100.x.x.x)">
+          <input id="mport" type="number" value="52718" title="对方端口,默认 52718">
+          <button id="msend" class="btn-accent">选文件/文件夹发送</button>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="./src/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>镜像装机档（选版本装系统）· 现状说明（已实现）</title>
+<style>
+  :root{
+    --bg:#f5f7fa; --card:#ffffff; --ink:#1f2933; --muted:#6b7280;
+    --line:#e5e7eb; --brand:#2563eb; --brand-soft:#eff6ff;
+    --ok:#16a34a; --ok-bg:#ecfdf5; --warn:#d97706; --warn-bg:#fffbeb;
+    --risk:#dc2626; --risk-bg:#fef2f2; --radius:14px;
+    --up:#0891b2; --up-bg:#ecfeff; --down:#ea580c; --down-bg:#fff7ed; --same:#7c3aed; --same-bg:#f5f3ff;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0; background:var(--bg); color:var(--ink);
+    font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",-apple-system,system-ui,sans-serif;
+    line-height:1.7; font-size:16px;}
+  .wrap{max-width:1000px; margin:0 auto; padding:32px 20px 80px;}
+  header.doc{background:linear-gradient(135deg,var(--brand),#4f46e5); color:#fff;
+    border-radius:var(--radius); padding:28px 32px; margin-bottom:24px; box-shadow:0 10px 30px rgba(37,99,235,.25);}
+  header.doc h1{margin:0 0 8px; font-size:26px;}
+  header.doc .meta{opacity:.92; font-size:14px;}
+  nav.toc{background:var(--card); border:1px solid var(--line); border-radius:var(--radius); padding:16px 22px; margin-bottom:24px;}
+  nav.toc strong{display:block; margin-bottom:8px; color:var(--muted); font-size:13px;}
+  nav.toc a{display:inline-block; margin:4px 8px 4px 0; padding:5px 12px; border-radius:999px;
+    background:var(--brand-soft); color:var(--brand); text-decoration:none; font-size:14px;}
+  nav.toc a:hover{background:var(--brand); color:#fff;}
+  section.card{background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:24px 28px; margin-bottom:20px; box-shadow:0 1px 3px rgba(0,0,0,.04);}
+  section.card h2{margin:0 0 14px; font-size:20px; display:flex; align-items:center; gap:8px;}
+  section.card h2::before{content:""; width:5px; height:20px; background:var(--brand); border-radius:3px;}
+  h3{margin:18px 0 8px; font-size:16px; color:var(--brand);}
+  .badge{display:inline-block; padding:3px 10px; border-radius:999px; font-size:13px; font-weight:600; white-space:nowrap;}
+  .badge.ok{background:var(--ok-bg); color:var(--ok);}
+  .badge.warn{background:var(--warn-bg); color:var(--warn);}
+  .badge.risk{background:var(--risk-bg); color:var(--risk);}
+  .badge.up{background:var(--up-bg); color:var(--up);}
+  .badge.down{background:var(--down-bg); color:var(--down);}
+  .badge.same{background:var(--same-bg); color:var(--same);}
+  .callout{border-left:4px solid var(--brand); background:var(--brand-soft); padding:12px 16px; border-radius:0 8px 8px 0; margin:12px 0;}
+  .callout.risk{border-color:var(--risk); background:var(--risk-bg);}
+  .callout.ok{border-color:var(--ok); background:var(--ok-bg);}
+  .callout.warn{border-color:var(--warn); background:var(--warn-bg);}
+  table{width:100%; border-collapse:collapse; margin:12px 0; font-size:14.5px;}
+  th,td{border:1px solid var(--line); padding:10px 12px; text-align:left; vertical-align:top;}
+  th{background:#f9fafb; color:var(--muted);}
+  code{background:#f1f5f9; padding:1px 6px; border-radius:5px; font-size:14px; color:#be185d; font-family:Consolas,"Courier New",monospace;}
+  .kbd{font-family:Consolas,monospace; font-size:13px; color:var(--brand);}
+  .diagram{background:#fafbfc; border:1px dashed var(--line); border-radius:10px; padding:16px; text-align:center; overflow:auto;}
+  .grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; margin-top:8px;}
+  .mini{border:1px solid var(--line); border-radius:10px; padding:14px 16px; background:#fff;}
+  .mini h4{margin:0 0 6px; font-size:15px;}
+  .mini p{margin:0; font-size:13.5px; color:var(--muted);}
+  ol.steps{margin:8px 0; padding-left:22px;} ol.steps li{margin:6px 0;}
+  @media (max-width:600px){ .wrap{padding:20px 14px;} header.doc{padding:22px;} section.card{padding:18px;} }
+  @media print{ body{background:#fff;} header.doc{box-shadow:none; -webkit-print-color-adjust:exact; print-color-adjust:exact;}
+    nav.toc{display:none;} section.card{break-inside:avoid; box-shadow:none;} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="doc">
+    <h1>🖥️ 镜像装机档（选版本装系统）· 现状说明</h1>
+    <div class="meta">更新：2026-06-05 ｜ 状态 <b>已实现并通过测试(52/52)</b> ｜ 一句话：点「镜像装机」选系统+版本，工具按"目标 vs 当前系统"自动挑最省事的装法，缺的官方工具先找本地、缺了才稳妥下载。</div>
+  </header>
+
+  <nav class="toc">
+    <strong>目录</strong>
+    <a href="#why">① 重置 vs 镜像</a>
+    <a href="#menu">② 选版本菜单</a>
+    <a href="#flow">③ 自动分路流程图</a>
+    <a href="#routes">④ 四条路线</a>
+    <a href="#download">⑤ 官方工具下载</a>
+    <a href="#downgrade">⑥ 降级 U 盘引导</a>
+    <a href="#guard">⑦ 安全守卫</a>
+    <a href="#test">⑧ 验证边界</a>
+  </nav>
+
+  <section class="card" id="why">
+    <h2>① 重置 vs 镜像：先搞清楚用哪个</h2>
+    <table>
+      <tr><th>你想干啥</th><th>用哪个</th><th>说明</th></tr>
+      <tr><td>系统弄干净、<b>版本不变</b></td><td><span class="badge same">③ 重置此电脑</span></td><td>Windows 自带「重置」，<b>只能装回当前版本</b>(你是 Win11 专业版就还是 Win11 专业版，不能换 Win10/换版次)。保留个人文件，但清掉已装软件。</td></tr>
+      <tr><td><b>换版本</b>(升 Win11 / 降 Win10 / 重装)</td><td><span class="badge ok">③ → 镜像装机</span></td><td>本档主角，见下。</td></tr>
+    </table>
+    <div class="callout ok"><strong>已加提示：</strong>点「重置此电脑」时，确认框会<b>自动读出并写明当前系统</b>(如"会装回你当前的【Windows 11 专业版】，版本不变")，小白一眼就懂。</div>
+  </section>
+
+  <section class="card" id="menu">
+    <h2>② 点「镜像装机」→ 选版本菜单</h2>
+    <p>不再"挂载扫描本地所有 ISO"，而是直接弹一个固定菜单(4 项)，选一个：</p>
+    <div class="grid">
+      <div class="mini"><h4>Windows 11 家庭版</h4><p>Major 11 · Home</p></div>
+      <div class="mini"><h4>Windows 11 专业版</h4><p>Major 11 · Pro</p></div>
+      <div class="mini"><h4>Windows 10 家庭版</h4><p>Major 10 · Home</p></div>
+      <div class="mini"><h4>Windows 10 专业版</h4><p>Major 10 · Pro</p></div>
+    </div>
+    <div class="callout warn"><strong>关于家庭版/专业版：</strong>微软的官方<b>制盘工具按大版本分(Win10 一个、Win11 一个)，不按家庭/专业分</b> —— 一个工具同时能装家庭版和专业版，到底装哪个是在<b>装系统那一步</b>才选。所以下载工具时，选家庭版和专业版下到的是同一个工具，这是正常的。</div>
+  </section>
+
+  <section class="card" id="flow">
+    <h2>③ 自动分路流程图</h2>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart TD
+  S([点 镜像装机]) --> P[弹版本菜单<br/>Win11/Win10 × 家庭/专业]
+  P --> C{目标主版本<br/>vs 当前系统}
+  C -->|目标更高 = 升级| U{选的是?}
+  C -->|相同 = 同版本| RI[本地 ISO setup.exe 重装]
+  C -->|目标更低 = 降级| DG[官方制盘工具做 U 盘 + 小白引导]
+  U -->|家庭版| UE[官方易升 exe 原地升级保留文件]
+  U -->|专业版| UI2[本地 Pro ISO setup.exe 原地升级]
+  UE --> A1[(tools 找易升 exe<br/>没有就下载)]
+  UI2 --> A2[(images 找 ISO<br/>没有就下制盘工具)]
+  RI --> A2
+  DG --> A3[(tools 找制盘工具<br/>没有就下载)]
+      </pre>
+      <noscript>点镜像装机→选版本→比对当前系统→升级(家庭版走易升exe/专业版走ISO) / 同版本(ISO重装) / 降级(制盘U盘+引导)；资源先找本地、缺了才下。</noscript>
+    </div>
+  </section>
+
+  <section class="card" id="routes">
+    <h2>④ 四条路线（核心规则）</h2>
+    <table>
+      <tr><th>目标 vs 当前</th><th>版本</th><th>怎么装</th><th>要的东西 / 本地没有时</th></tr>
+      <tr><td><span class="badge up">升级 ↑</span></td><td>家庭版</td><td>官方"易升"exe，<b>原地升级保留文件</b></td><td><code>tools\</code> 易升 exe → 没有就下载</td></tr>
+      <tr><td><span class="badge up">升级 ↑</span></td><td>专业版</td><td>本地 ISO 的 setup.exe，<b>原地升级保留文件</b></td><td><code>images\</code> 专业版 ISO → 没有就下制盘工具</td></tr>
+      <tr><td><span class="badge same">同版本 =</span></td><td>任意</td><td>本地 ISO setup.exe 重装</td><td><code>images\</code> ISO → 缺了下制盘工具</td></tr>
+      <tr><td><span class="badge down">降级 ↓</span></td><td>任意</td><td>U 盘装，弹小白引导</td><td><code>tools\</code> 制盘工具 → 缺了下载</td></tr>
+    </table>
+    <div class="callout"><strong>为什么这么分：</strong>① 易升 exe <b>只能往上升、不能降</b>，所以降级一律走制盘 U 盘。② 升级时：<b>家庭版→易升 exe(沿用当前=家庭版)、专业版→本地 Pro ISO 原地升到 Pro</b> —— 正好对上本地 ISO 都是专业版的现状。</div>
+  </section>
+
+  <section class="card" id="download">
+    <h2>⑤ 官方工具下载（先找本地、缺了才下）</h2>
+    <p>需要的官方工具/镜像，统一规则：<b>先在本地目录找，有就直接用、不重复下；没有才用官方直链下载</b>，下完留着复用。</p>
+    <h3>已核实官方直链（2026-06-05）</h3>
+    <table>
+      <tr><th>工具</th><th>用途</th><th>官方地址</th></tr>
+      <tr><td>Win11 易升</td><td>家庭版升 Win11，原地升级</td><td><span class="kbd">go.microsoft.com/fwlink/?linkid=2171764</span></td></tr>
+      <tr><td>Win11 制盘工具</td><td>专业版升级缺 ISO 时</td><td><span class="kbd">go.microsoft.com/fwlink/?linkid=2156295</span></td></tr>
+      <tr><td>Win10 制盘工具(22H2)</td><td>降级到 Win10</td><td><span class="kbd">go.microsoft.com/fwlink/?LinkId=2265055</span></td></tr>
+    </table>
+    <div class="callout ok"><strong>下载器够稳(治"正常流程下不下来")：</strong>强制 TLS1.2、跟随官方跳转、失败自动重试 3 次、下完校验文件大小、全败弹框给官网手动地址兜底。<b>实测</b>：Win10 制盘工具 18.5MB / 13 秒下到位。</div>
+    <div class="callout"><strong>点了"帮我下载"会先查文件夹：</strong>已经下过(非空)就提示"不用重复下载"并可打开文件夹；没有才弹"将下载…(官方地址)"确认后再下。</div>
+  </section>
+
+  <section class="card" id="downgrade">
+    <h2>⑥ 降级 = U 盘装，弹小白图文引导</h2>
+    <p>选了比当前更低的版本(如 Win11→Win10)，系统里装不了，弹一个 5 步小白引导窗：</p>
+    <ol class="steps">
+      <li><b>第 1 步</b>：先回主界面备份桌面(降级会清 C 盘)。</li>
+      <li><b>第 2 步</b>：做 Win10 启动 U 盘 —— 窗里点绿色 <span class="badge ok">⬇ 帮我下载制盘工具</span>，下完<b>文案会自动变成实际文件路径</b>，双击它做 U 盘。</li>
+      <li><b>第 3 步</b>：从 U 盘启动电脑(开机按 F12/F8/Esc 等)。</li>
+      <li><b>第 4 步</b>：装 Win10(删 C 盘分区→装到未分配空间，认准别误删 D/E 盘)。</li>
+      <li><b>第 5 步</b>：装完连网装驱动激活，再回工具点 ④ 还原桌面。</li>
+    </ol>
+    <div class="callout warn"><strong>提醒小白：</strong>这个制盘工具是在<b>本机双击运行</b>来制作启动 U 盘的，<b>不是把它拷进 U 盘运行</b>。下载完成框里也专门写了这句。</div>
+  </section>
+
+  <section class="card" id="guard">
+    <h2>⑦ 安全守卫（一直都在）</h2>
+    <div class="grid">
+      <div class="mini"><h4>备份守卫</h4><p>没检测到备份清单 <code>manifest.json</code>，重置/装机一律拦住，先逼你备份。</p></div>
+      <div class="mini"><h4>二次确认</h4><p>真正动系统前强制再确认一次(不可逆操作)。</p></div>
+      <div class="mini"><h4>Execute 开关</h4><p>装机/重置函数默认只演练，带 <code>-Execute</code> 才真跑；自动测试永不传。</p></div>
+      <div class="mini"><h4>下载不静默</h4><p>下载失败弹框说清原因 + 官网兜底地址，不偷偷失败。</p></div>
+    </div>
+  </section>
+
+  <section class="card" id="test">
+    <h2>⑧ 验证边界</h2>
+    <table>
+      <tr><td><span class="badge ok">已自动测</span></td><td>版本目录、分路判断(四路线全组合)、官方直链/文件名映射、下载器(先找本地/校验/失败)、本地 ISO 匹配、当前系统版次识别、各模块守卫 —— 共 <b>52 项 Pester 全绿</b>，UI 自检通过。</td></tr>
+      <tr><td><span class="badge warn">已手动验</span></td><td>真实联网下载官方制盘工具(Win10 工具 18.5MB/13s 成功)；降级引导窗渲染截图确认按钮与动态文案。</td></tr>
+      <tr><td><span class="badge risk">不能测</span></td><td>真正 setup.exe / 易升 装系统、真正做 U 盘装机 —— 不可逆，由你亲自操作。</td></tr>
+    </table>
+    <h3>关键函数(ImageManager.psm1)</h3>
+    <p><code>Get-WindowsCatalog</code> · <code>Get-ReinstallRoute</code> · <code>Get-OfficialToolUrl</code> · <code>Get-OfficialToolFileName</code> · <code>Save-OfficialTool</code> · <code>Find-LocalIso</code> · <code>Get-CurrentWindowsName</code> · <code>Get-WindowsEditionName</code></p>
+    <div class="callout"><strong>已弃用：</strong>原 Fido 下 ISO 方案(<code>Get-IsoDownloadUrl</code> + <code>tools\Fido.ps1</code>)已删除 —— 改用更稳的微软官方制盘工具。</div>
+  </section>
+
+</div>
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs');
+    m.default.initialize({ startOnLoad:true, theme:'default' });
+  }catch(e){ /* 离线降级：保留文字版关系 */ }
+</script>
+</body>
+</html>

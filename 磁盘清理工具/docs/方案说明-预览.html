@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>磁盘清理工具 · 方案说明</title>
+<style>
+  :root{
+    --bg:#f5f7fa; --card:#ffffff; --ink:#1f2933; --muted:#6b7280;
+    --line:#e5e7eb; --brand:#2563eb; --brand-soft:#eff6ff;
+    --ok:#16a34a; --ok-bg:#ecfdf5; --warn:#d97706; --warn-bg:#fffbeb;
+    --risk:#dc2626; --risk-bg:#fef2f2; --radius:14px;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"PingFang SC","Microsoft YaHei","Hiragino Sans GB",-apple-system,system-ui,sans-serif;
+    line-height:1.7; font-size:16px;
+  }
+  .wrap{max-width:960px; margin:0 auto; padding:32px 20px 80px;}
+  header.doc{
+    background:linear-gradient(135deg,var(--brand),#4f46e5);
+    color:#fff; border-radius:var(--radius); padding:28px 32px; margin-bottom:24px;
+    box-shadow:0 10px 30px rgba(37,99,235,.25);
+  }
+  header.doc h1{margin:0 0 8px; font-size:28px;}
+  header.doc .meta{opacity:.9; font-size:14px;}
+  nav.toc{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:18px 22px; margin-bottom:24px;
+  }
+  nav.toc strong{display:block; margin-bottom:10px; color:var(--muted); font-size:13px; letter-spacing:.05em;}
+  nav.toc a{
+    display:inline-block; margin:4px 10px 4px 0; padding:5px 12px; border-radius:999px;
+    background:var(--brand-soft); color:var(--brand); text-decoration:none; font-size:14px;
+  }
+  nav.toc a:hover{background:var(--brand); color:#fff;}
+  section.card{
+    background:var(--card); border:1px solid var(--line); border-radius:var(--radius);
+    padding:24px 28px; margin-bottom:20px; box-shadow:0 1px 3px rgba(0,0,0,.04);
+  }
+  section.card h2{margin:0 0 14px; font-size:20px; display:flex; align-items:center; gap:8px;}
+  section.card h2::before{content:""; width:5px; height:20px; background:var(--brand); border-radius:3px;}
+  .badge{display:inline-block; padding:3px 10px; border-radius:999px; font-size:13px; font-weight:600;}
+  .badge.ok{background:var(--ok-bg); color:var(--ok);}
+  .badge.warn{background:var(--warn-bg); color:var(--warn);}
+  .badge.risk{background:var(--risk-bg); color:var(--risk);}
+  .callout{border-left:4px solid var(--brand); background:var(--brand-soft); padding:12px 16px; border-radius:0 8px 8px 0; margin:12px 0;}
+  .callout.risk{border-color:var(--risk); background:var(--risk-bg);}
+  .callout.ok{border-color:var(--ok); background:var(--ok-bg);}
+  table{width:100%; border-collapse:collapse; margin:12px 0; font-size:15px;}
+  th,td{border:1px solid var(--line); padding:10px 12px; text-align:left; vertical-align:top;}
+  th{background:#f9fafb; color:var(--muted);}
+  .diagram{background:#fafbfc; border:1px dashed var(--line); border-radius:10px; padding:16px; text-align:center; overflow:auto;}
+  code{background:#f1f5f9; padding:1px 6px; border-radius:5px; font-size:14px;}
+  .mock{background:#0f172a; color:#e2e8f0; border-radius:10px; padding:18px 20px; font-family:"Consolas","Microsoft YaHei",monospace; font-size:14px; line-height:1.6; white-space:pre; overflow:auto;}
+  .tree{background:#fafbfc; border:1px solid var(--line); border-radius:10px; padding:16px 20px; font-family:"Consolas",monospace; font-size:14px; line-height:1.7; white-space:pre; overflow:auto;}
+  @media (max-width:600px){ .wrap{padding:20px 14px;} header.doc{padding:22px;} section.card{padding:18px;} }
+  @media print{
+    body{background:#fff;} header.doc{box-shadow:none; -webkit-print-color-adjust:exact; print-color-adjust:exact;}
+    nav.toc{display:none;} section.card{break-inside:avoid; box-shadow:none;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="doc">
+    <h1>🧹 磁盘清理工具 · 方案说明</h1>
+    <div class="meta">更新时间：2026-06-05 ｜ 形态：PowerShell + WPF，绿色免安装 ｜ 一句话：扫出垃圾、帮你判断能不能删、勾选确认再清理</div>
+  </header>
+
+  <nav class="toc">
+    <strong>目录</strong>
+    <a href="#overview">这是个啥</a>
+    <a href="#flow">怎么干活</a>
+    <a href="#ui">界面长这样</a>
+    <a href="#safety">三档安全标记</a>
+    <a href="#modules">五大功能模块</a>
+    <a href="#files">文件结构</a>
+    <a href="#scope">先不做的</a>
+  </nav>
+
+  <section class="card" id="overview">
+    <h2>这是个啥</h2>
+    <p>一个 Windows 桌面小工具，帮你找出并清理占空间的垃圾文件。用 Windows 自带的 PowerShell 写，<strong>啥都不用装</strong>，整个文件夹发给谁都能直接双击用——和你的 <code>InstallationTools</code> 项目一个套路、一个界面风格。</p>
+    <div class="callout ok"><strong>核心特点：</strong>有界面 · 绿色免安装 · 会帮你判断「能不能删 / 多久没碰过」 · 删之前一律你勾选确认，绝不自动乱删。</div>
+  </section>
+
+  <section class="card" id="flow">
+    <h2>怎么干活（操作流程）</h2>
+    <div class="diagram">
+      <pre class="mermaid">
+flowchart LR
+  A[选哪个盘] --> B[勾选扫描类型]
+  B --> C[开始扫描]
+  C --> D[列出结果<br/>带颜色标记]
+  D --> E{你勾选<br/>要删的}
+  E --> F[弹窗二次确认<br/>显示释放多少空间]
+  F --> G[删除<br/>走回收站兜底]
+  G --> H[汇总：删了几项·省了多少]
+      </pre>
+      <noscript>流程：选盘 → 勾选扫描类型 → 扫描 → 带标记的结果列表 → 你勾选 → 二次确认 → 删除(走回收站) → 汇总</noscript>
+    </div>
+    <div class="callout"><strong>安全第一：</strong>普通文件删除走「回收站」，万一手滑还能找回；只有清空回收站这一项才是彻底删除（本来就是要清空它）。</div>
+  </section>
+
+  <section class="card" id="ui">
+    <h2>界面长这样（草图）</h2>
+<div class="mock">┌──────────────────────────────────────────────┐
+│   🧹 磁盘清理工具                              │
+├──────────────────────────────────────────────┤
+│  选哪个盘:  ☑C:  ☐D:  ☐E:  ☐F:              │
+│  扫描类型:  ☑系统临时  ☑回收站                │
+│             ☑浏览器缓存 ☑大文件(&gt;100MB)       │
+│              [ 开始扫描 ]   ▓▓▓░░ 进度        │
+├──────────────────────────────────────────────┤
+│  扫描结果（勾选要删的）：                      │
+│   ☑ 🟢可放心删 C:\Windows\Temp ..... 1.2 GB   │
+│   ☑ 🟢可放心删 Chrome 缓存 ......... 456 MB   │
+│   ☐ 🟡建议确认 E:\下载\安装包.zip .. 800 MB   │
+│                            （8个月没动过）     │
+│   ☐ 🔴谨慎    E:\工作\报告.docx ...... 5 MB   │
+│                            （最近还用过）      │
+│  已选 1.6 GB              [ 清理选中项 ]       │
+└──────────────────────────────────────────────┘</div>
+    <p>界面配色、字体（微软雅黑）、蓝色主按钮，都和 <code>InstallationTools</code> 保持一致。扫描放后台跑，进度条转起来，界面不卡死。</p>
+  </section>
+
+  <section class="card" id="safety">
+    <h2>三档安全标记（工具帮你判断）</h2>
+    <p>不光把文件列出来，还按「公认程度 + 多久没动过」给每一项打个颜色标，省得你自己一个个琢磨：</p>
+    <table>
+      <tr><th>标记</th><th>什么情况</th><th>默认勾选？</th><th>界面提示</th></tr>
+      <tr><td><span class="badge ok">🟢 可放心删</span></td><td>系统临时文件、回收站、浏览器缓存——软件生成的临时垃圾，删了没影响</td><td>是 ✓</td><td>「系统垃圾」「浏览器缓存」</td></tr>
+      <tr><td><span class="badge warn">🟡 建议确认</span></td><td>大文件，且 ≥ 3 个月没动过——你八成早忘了，可以考虑删</td><td>否</td><td>「8个月没动过」</td></tr>
+      <tr><td><span class="badge risk">🔴 谨慎</span></td><td>大文件，但最近 7 天还动过——提醒你别手滑删了</td><td>否</td><td>「最近还用过」</td></tr>
+    </table>
+    <div class="callout"><strong>怎么算「多久没用」：</strong>看文件的最后修改时间，拿现在的时间一减，换算成「X 天 / X 个月」。大文件列表还能按「最久没用」排序，把占地方又早忘了的排前面。</div>
+  </section>
+
+  <section class="card" id="modules">
+    <h2>五大功能模块</h2>
+    <table>
+      <tr><th>模块</th><th>干啥</th><th>标记</th></tr>
+      <tr><td><code>TempCleaner</code></td><td>扫系统临时文件夹（TEMP、Windows\Temp、Prefetch 等）</td><td><span class="badge ok">🟢</span></td></tr>
+      <tr><td><code>RecycleBin</code></td><td>统计 / 清空回收站</td><td><span class="badge ok">🟢</span></td></tr>
+      <tr><td><code>BrowserCache</code></td><td>清 Chrome / Edge 缓存（不碰书签、密码、历史）</td><td><span class="badge ok">🟢</span></td></tr>
+      <tr><td><code>LargeFiles</code></td><td>在选中的盘上找大于 100MB 的大文件</td><td><span class="badge warn">🟡/🔴</span></td></tr>
+      <tr><td><code>Analyzer</code></td><td>给每一项打安全标记、算「多久没用」</td><td>—</td></tr>
+    </table>
+    <p>每个模块只干一件事，扫描和删除分开，返回纯数据给界面层显示——好维护、好测、出问题好查。</p>
+  </section>
+
+  <section class="card" id="files">
+    <h2>文件结构</h2>
+<div class="tree">磁盘清理工具/
+├── 一键启动.bat              # 双击启动，自动提管理员权限
+├── src/
+│   ├── Start.ps1             # 入口：检查权限后开界面
+│   ├── UI/MainWindow.ps1     # WPF 主界面（XAML）
+│   └── Modules/
+│       ├── DiskScanner.psm1     # 列磁盘、容量
+│       ├── TempCleaner.psm1     # 系统临时文件
+│       ├── RecycleBin.psm1      # 回收站
+│       ├── BrowserCache.psm1    # 浏览器缓存
+│       ├── LargeFiles.psm1      # 大文件查找
+│       └── Analyzer.psm1        # 安全标记 + 多久没用
+├── tests/                    # Pester 测试
+├── docs/                     # 方案文档（就是这份）
+└── README.md                # 使用说明</div>
+  </section>
+
+  <section class="card" id="scope">
+    <h2>先不做的（避免越做越大）</h2>
+    <div class="callout"><strong>暂不包含：</strong>打包 exe（PowerShell 本就免安装）、定时自动清理、注册表清理（风险高）、Firefox 等非 Chromium 浏览器、云同步。这些将来真需要再单独加。</div>
+    <div class="callout ok"><strong>下一步：</strong>方案你过目确认后，我就拆成详细的实现计划，然后一步步把它做出来。</div>
+  </section>
+
+</div>
+
+<script type="module">
+  try{
+    const m = await import('https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs');
+    m.default.initialize({ startOnLoad:true, theme:'default' });
+  }catch(e){ /* 离线降级 */ }
+</script>
+</body>
+</html>

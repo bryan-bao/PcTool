@@ -1,0 +1,12 @@
+{
+  "target": "en",
+  "voice": "zh-CN-XiaoxiaoNeural",
+  "rate": 0,
+  "engine": "auto",
+  "autostart": false,
+  "hotkey": "ctrl+alt+t",
+  "snip_to_window": false,
+  "selection_translate": true,
+  "selection_require_ctrl": false,
+  "audio_dir": ""
+}
