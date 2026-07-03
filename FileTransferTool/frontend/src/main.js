@@ -100,7 +100,7 @@ q('#sendfiles').onclick = async (e) => {
   try {
     const paths = await pickPaths(kind);
     if (paths.length) await api.sendToPeer(selectedPeer.host, selectedPeer.port, paths);
-  } catch (err) { console.error(err); }
+  } catch (err) { console.error(err); alert('发送失败: ' + (err?.message || err)); }
 };
 
 // ---- 发文件链接:文件/文件夹共用一个分享链接,可增可删,列表整体刷新 ----
@@ -176,7 +176,7 @@ q('#msend').onclick = async (e) => {
   try {
     const paths = await pickPaths(kind);
     if (paths.length) await api.sendToPeer(t.host, t.port, paths);
-  } catch (err) { console.error(err); }
+  } catch (err) { console.error(err); alert('发送失败: ' + (err?.message || err)); }
 };
 
 // ---- 传输任务 ----
@@ -193,8 +193,8 @@ function renderTasks() {
     const div = document.createElement('div');
     div.className = 'task' + (t.status === 'pending' ? ' pending' : '') + (t.status === 'done' ? ' done' : '');
     let actions = '';
-    if (t.status === 'pending' && t.direction === 'recv') {
-      actions = `<button class="btn-accent" data-acc="${t.id}">同意接收</button><button class="btn-ghost" data-rej="${t.id}">拒绝</button>`;
+    if ((t.status === 'pending' || t.status === 'transferring') && t.direction === 'recv') {
+      actions = `<button class="btn-ghost" data-rej="${t.id}">拒绝</button>`;
     }
     div.innerHTML = `
       <div class="row"><b>${arrow} ${t.name}</b><span class="badge ${t.status}">${statusText(t.status)}</span></div>
@@ -207,7 +207,6 @@ function renderTasks() {
         <input type="number" min="0" placeholder="本任务限速 KB/s" data-lim="${t.id}"></div>`;
     box.appendChild(div);
   });
-  box.querySelectorAll('[data-acc]').forEach(b => b.onclick = () => api.accept(b.dataset.acc));
   box.querySelectorAll('[data-rej]').forEach(b => b.onclick = () => api.reject(b.dataset.rej));
   box.querySelectorAll('[data-lim]').forEach(inp => inp.onchange = () => {
     api.setTaskLimit(inp.dataset.lim, (parseInt(inp.value, 10) || 0) * 1024);

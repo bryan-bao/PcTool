@@ -46,6 +46,13 @@ def _refresh():
     )
 
 
+def warmup():
+    """Prepare the Bing session in the background so the first user translation is faster."""
+    with _lock:
+        if _session is None or time.time() > _meta["expiry"]:
+            _refresh()
+
+
 def _chunks(text, limit=900):
     """按行切成不超过 limit 字的块（必应单次约 1000 字上限）"""
     if len(text) <= limit:

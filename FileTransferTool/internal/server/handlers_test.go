@@ -200,7 +200,7 @@ func TestShare_AddRemovePageAndZip(t *testing.T) {
 	}
 }
 
-func TestOffer_CreatesPendingThenAccept(t *testing.T) {
+func TestOffer_CreatesTransferringTask(t *testing.T) {
 	dir := t.TempDir()
 	mgr := transfer.NewManager(0)
 	s := New(mgr, "host", "tok123", dir)
@@ -213,15 +213,8 @@ func TestOffer_CreatesPendingThenAccept(t *testing.T) {
 		t.Fatalf("offer 应 200,得到 %d: %s", rec.Code, rec.Body.String())
 	}
 	tk, ok := mgr.Get("o1")
-	if !ok || tk.Status != transfer.StatusPending {
-		t.Fatalf("应建出 pending 任务,得到 %+v", tk)
-	}
-	reqA := httptest.NewRequest("POST", "/api/offer/o1/accept", nil)
-	recA := httptest.NewRecorder()
-	s.Handler().ServeHTTP(recA, reqA)
-	tk2, _ := mgr.Get("o1")
-	if tk2.Status != transfer.StatusTransferring {
-		t.Fatalf("accept 后应为 transferring,得到 %s", tk2.Status)
+	if !ok || tk.Status != transfer.StatusTransferring {
+		t.Fatalf("应建出 transferring 任务,得到 %+v", tk)
 	}
 }
 

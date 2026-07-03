@@ -30,6 +30,11 @@
   - **可改语音保存位置**：设置页"语音保存位置"行显示当前目录+「📁修改保存位置」（桌面版 `WEBVIEW_WINDOW.create_file_dialog(FOLDER_DIALOG)` 选文件夹，网页版返回 400 提示用桌面版）+「📂打开文件夹」。新设置项 `audio_dir`（空=默认 audio_output）；`current_audio_dir()` 统一取有效目录（不可写则退默认）；settings GET 附 `audio_dir_effective` 给前端显示
   - **朗读/试听不落盘，点下载才存**（用户嫌试听 mp3 堆满文件夹）：`/api/tts` 改成生成到临时文件→读字节→删临时文件→`Response(mimetype=audio/mpeg)` 流回前端 blob 播放，**不在语音文件夹留任何文件**；新 `/api/save-tts` 才真正存到 `current_audio_dir()`；前端 `playTts()` blob 播放+`lastTts` 记参数，点「⬇️下载 MP3」调 save-tts。删了旧 `/audio/<fname>` 路由（不再有持久 url）
   - **语音输入**：实测确认——网页版浏览器按钮在（内核有 webkitSpeechRecognition），但识别靠浏览器在线服务需联网+麦克风+连得上（Chrome 走谷歌国内要 VPN，Edge 走微软一般可用），"说话出字"无法自动化测需用户本人试；桌面版 WebView2 服务不通（坑#3），用户决定**保持现状**（点了失败才隐藏+提示一次），不改
+- ✅ v1.2 文档翻译页签（2026-06-15）：新页签「📄 文档翻译」，桌面版用系统对话框选文件(多选)/文件夹(自动列出支持的文档)，翻 txt/docx/xlsx/pdf，**翻译后在原文件旁生成带语言后缀的新文件**（报告.docx→报告_en.docx）；pdf 抠文字另存 .docx（保不住排版）。核心模块 `doc_translate.py`；接口 `/api/doc-pick`(选文件，网页版无真实路径故返回400)、`/api/doc-translate`(批量翻，复用 translate_lines)；前端逐文件翻译(进度可见)、换语言可重译(记 doneTarget)。translate_lines 改返回 `(译文列表, 没翻成行数)`——调用方 app.py:544(snip)、doc_translate 都已适配。经多智能体审查(workflow)+对抗验证修了6个真问题，全部单元/端到端/打包后实测通过。
+  - **依赖**(已装进 venv，pip 缓存 D:\pip-cache)：`python-docx`(Word)、`openpyxl`(Excel)、`pypdf`(PDF抠字)+连带 lxml/et_xmlfile。openpyxl/pypdf 纯 py 无需 spec datas。
+  - **spec 硬要求**：必须 `collect_data_files('docx')`（已加），否则打包后建/存 Word（含 pdf→docx）报 FileNotFoundError 缺 templates/default.docx（同 rapidocr 坑）。验证：`dir dist\TranslationTool\_internal\docx\templates\default.docx`。
+  - **防"假翻译"**(最重要)：断网/限流时 translate_lines 会静默把原文当译文退回，旧逻辑会生成一份"✓成功"但没翻的文件。现在 translate_lines 回报"没翻成行数"，doc_translate **整篇全没翻成→报错删半成品(不留假文件)，部分没翻成→保留但前端黄色警告**(⚠ N段没翻成)。
+  - **已知局限**：docx 含超链接的段落翻译后会丢链接(保译文文字、不重复损坏)；页眉页脚/文本框/图片里的文字翻不到；xlsx 跳过公式不翻；pdf 扫描件(图片)无文字会提示用截图翻译。
 - 💤 阶段 5 可选：300+ 全量声音列表、翻译历史、桌面版语音输入替代方案（Vosk/whisper）、副屏截图支持等
 
 ## 发布版（发给别人，2026-06-15）

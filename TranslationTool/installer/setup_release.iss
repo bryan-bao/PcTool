@@ -1,6 +1,6 @@
 ﻿; 翻译·语音小工具 —— 发布版安装包（专门用来发给别人）
 ; 和开发版用不同的 AppId，互不干扰；装到对方自己的用户目录，免管理员、免 VPN
-; 编译: "E:\chao-tool\TranslationTool\tools\Inno Setup 6\ISCC.exe" setup_release.iss
+; 编译: ISCC.exe setup_release.iss
 
 #define MyName "翻译·语音小工具"
 #define MyVersion "1.2.0"
@@ -39,8 +39,6 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 
 [Files]
 Source: "..\dist\TranslationTool\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
-; WebView2 引导安装器：打进包里但不释放到安装目录，只在需要时临时解压
-Source: "MicrosoftEdgeWebview2Setup.exe"; Flags: dontcopy
 
 [Icons]
 Name: "{group}\{#MyName}"; Filename: "{app}\TranslationTool.exe"
@@ -63,6 +61,15 @@ Type: filesandordirs; Name: "{localappdata}\TranslationTool"
 Root: HKCU; Subkey: "Software\Microsoft\Windows\CurrentVersion\Run"; ValueName: "TranslationTool"; Flags: dontcreatekey uninsdeletevalue
 
 [Code]
+var
+  DownloadPage: TDownloadWizardPage;
+
+procedure InitializeWizard;
+begin
+  DownloadPage := CreateDownloadPage(SetupMessage(msgWizardPreparing), SetupMessage(msgPreparingDesc), nil);
+  DownloadPage.ShowBaseNameInsteadOfUrl := True;
+end;
+
 { —— 检测系统是否已装 Edge WebView2 运行时（界面要靠它显示，缺了会白屏）—— }
 function WebView2Installed: Boolean;
 var v: String;
@@ -118,15 +125,31 @@ end;
 
 procedure CurStepChanged(CurStep: TSetupStep);
 var ResultCode: Integer;
+    DownloadError: String;
 begin
   if CurStep = ssPostInstall then
   begin
     if not WebView2Installed then
     begin
-      { 缺运行时：临时解压微软官方引导器，静默补装（约 2MB，需联网）。隐藏黑框、装完复查、失败给中文提示 }
+      { 缺运行时：安装时下载微软官方引导器，静默补装（约 2MB，需联网）。隐藏黑框、装完复查、失败给中文提示 }
       WizardForm.StatusLabel.Caption := '正在配置界面组件 WebView2（需要联网，请稍候）…';
-      ExtractTemporaryFile('MicrosoftEdgeWebview2Setup.exe');
-      if (not Exec(ExpandConstant('{tmp}\MicrosoftEdgeWebview2Setup.exe'), '/silent /install', '', SW_HIDE, ewWaitUntilTerminated, ResultCode)) or (not WebView2Installed) then
+      DownloadPage.Clear;
+      DownloadPage.Add('https://go.microsoft.com/fwlink/p/?LinkId=2124703', 'MicrosoftEdgeWebview2Setup.exe', '');
+      DownloadPage.Show;
+      try
+        try
+          DownloadPage.Download;
+          DownloadError := '';
+        except
+          DownloadError := GetExceptionMessage;
+        end;
+      finally
+        DownloadPage.Hide;
+      end;
+
+      if (DownloadError <> '') or
+         (not Exec(ExpandConstant('{tmp}\MicrosoftEdgeWebview2Setup.exe'), '/silent /install', '', SW_HIDE, ewWaitUntilTerminated, ResultCode)) or
+         (not WebView2Installed) then
       begin
         MsgBox('显示界面所需的组件 WebView2 没能装上（通常是安装时没联网）。' + #13#10#13#10 +
                '软件本身已安装完成，但首次打开如果是空白窗口，请按下面任一方式处理：' + #13#10 +

@@ -119,6 +119,42 @@
   #ttsAudio{display:none; flex:1; min-width:220px; max-width:420px;}
   .dl{display:none;}
 
+  /* ===== 文档翻译页 ===== */
+  .doc-card{
+    flex:1; min-height:0; display:flex; flex-direction:column;
+    background:var(--card); border:1px solid var(--line); border-radius:14px;
+    overflow:hidden; box-shadow:0 1px 4px rgba(31,36,48,.05);
+  }
+  .doc-drop{flex:1; min-height:0; overflow:auto; padding:14px 16px;}
+  .doc-drop.over{background:var(--brand-soft); outline:2px dashed var(--brand); outline-offset:-8px;}
+  .doc-empty{
+    height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; color:var(--muted); font-size:14.5px; line-height:2; gap:2px;
+  }
+  .doc-item{
+    display:flex; align-items:center; gap:12px; padding:10px 12px; border-radius:10px;
+    border:1px solid var(--line); margin-bottom:8px; background:#fbfbfe; font-size:14px;
+  }
+  .doc-item .ico{font-size:18px; flex:none;}
+  .doc-item .info{flex:1; min-width:0;}
+  .doc-item .fname{font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .doc-item .fstat{font-size:12.5px; color:var(--muted); margin-top:2px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+  .doc-item .fstat.ok{color:#16a34a;}
+  .doc-item .fstat.err{color:#d33;}
+  .doc-item .fstat.warn{color:#d97706;}
+  .doc-item .fstat.doing{color:var(--brand);}
+  .doc-item .del{
+    flex:none; border:none; background:transparent; cursor:pointer;
+    color:var(--muted); font-size:16px; padding:4px 6px; border-radius:6px;
+  }
+  .doc-item .del:hover{background:#eef0ff; color:var(--brand);}
+  .doc-export{
+    flex:none; display:flex; align-items:center; gap:8px; min-width:0;
+    color:var(--muted); font-size:12.5px;
+  }
+  .doc-export span{max-width:300px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;}
+
   /* ===== 设置页 ===== */
   .set-wrap{flex:1; min-height:0; overflow:auto; display:flex; flex-direction:column; gap:12px; align-items:center;}
   .set-card{
@@ -174,6 +210,7 @@
   <div class="tabs">
     <button class="tab active" id="tabTrans">📝 翻译</button>
     <button class="tab" id="tabTts">🎙️ 文字转语音</button>
+    <button class="tab" id="tabDoc">📄 文档翻译</button>
     <button class="tab" id="tabSet">⚙️ 设置</button>
   </div>
 </header>
@@ -237,6 +274,37 @@
     </div>
   </div>
 
+  <!-- ===== 页签：文档翻译 ===== -->
+  <div class="page" id="pageDoc">
+    <div class="lang-bar">
+      <span class="hint">翻译成</span>
+      <select id="docTarget"></select>
+      <button class="btn-ghost" id="docPickFiles">📄 选择文件</button>
+      <button class="btn-ghost" id="docPickFolder">📁 选择文件夹</button>
+      <button class="btn-ghost" id="docExportDir">📤 选择导出路径</button>
+      <span class="doc-export"><span id="docExportPath">默认原文件旁边</span></span>
+      <span class="grow" style="flex:1"></span>
+      <button class="btn-ghost" id="docClear">🧹 清空列表</button>
+    </div>
+    <div class="doc-card">
+      <div id="docDrop" class="doc-drop">
+        <div id="docEmpty" class="doc-empty">
+          点上面的「📄 选择文件」或「📁 选择文件夹」添加要翻译的文档<br>
+          也可以直接把文档拖到这里<br>
+          支持 Word（.docx）、纯文本（.txt）、PDF、Excel（.xlsx）<br>
+          <span style="font-size:12px;color:#b9bdcc">会优先翻译正文说明，保留代码、路径、编号和明显的专业标识；可选择导出文件夹</span>
+        </div>
+        <div id="docList"></div>
+      </div>
+    </div>
+    <div class="tts-bar" style="justify-content:flex-end;">
+      <span class="hint" id="docStatus" style="margin-right:auto;"></span>
+      <button class="btn-ghost" id="docExportDir2">📤 选择导出路径</button>
+      <button class="btn-ghost" id="docOpenExport" style="display:none;">📂 打开导出文件夹</button>
+      <button class="btn-main" id="docStart">🚀 开始翻译</button>
+    </div>
+  </div>
+
   <!-- ===== 页签三：设置 ===== -->
   <div class="page" id="pageSet">
     <div class="set-wrap">
@@ -246,9 +314,9 @@
           <select id="setTarget"></select>
         </div>
         <div class="set-row">
-          <div class="lab">翻译引擎<small>「自动」会探测网络：能连谷歌用谷歌，连不上（没开VPN）自动换必应</small></div>
+          <div class="lab">翻译引擎<small>自动模式：全部翻译精准优先；不可用时自动换直连引擎</small></div>
           <select id="setEngine">
-            <option value="auto">自动（推荐，谷歌↔必应智能切换）</option>
+            <option value="auto">自动（推荐，精准优先，失败自动回退）</option>
             <option value="google">谷歌翻译（需要代理/VPN）</option>
             <option value="bing">必应翻译（国内直连）</option>
             <option value="mymemory">MyMemory（备用）</option>
@@ -312,7 +380,8 @@
 const $ = id => document.getElementById(id);
 
 // ---------- 页签切换 ----------
-const PAGES = { trans: ["tabTrans", "pageTrans"], tts: ["tabTts", "pageTts"], set: ["tabSet", "pageSet"] };
+const PAGES = { trans: ["tabTrans", "pageTrans"], tts: ["tabTts", "pageTts"],
+                doc: ["tabDoc", "pageDoc"], set: ["tabSet", "pageSet"] };
 function switchTab(name) {
   for (const [key, [tabId, pageId]] of Object.entries(PAGES)) {
     $(tabId).classList.toggle("active", key === name);
@@ -321,8 +390,10 @@ function switchTab(name) {
 }
 $("tabTrans").onclick = () => switchTab("trans");
 $("tabTts").onclick = () => switchTab("tts");
+$("tabDoc").onclick = () => switchTab("doc");
 $("tabSet").onclick = () => switchTab("set");
 if (location.hash === "#tts") switchTab("tts");
+if (location.hash === "#doc") switchTab("doc");
 if (location.hash === "#set") switchTab("set");
 
 // ---------- 语言与声音清单 ----------
@@ -369,6 +440,7 @@ for (const [code, name] of LANGS) {
   srcSel.add(new Option(name, code));
   dstSel.add(new Option(name, code));
   $("setTarget").add(new Option(name, code));
+  $("docTarget").add(new Option(name, code));
 }
 function fillVoices(sel) {
   for (const [group, voices] of VOICES) {
@@ -380,7 +452,11 @@ function fillVoices(sel) {
 }
 fillVoices($("ttsVoice"));
 fillVoices($("setVoice"));
+// 显式默认目标语言=en，避免 /api/settings 读失败（如系统代理劫持 127.0.0.1）时
+// 下拉停在第一项中文，导致"中文翻中文"白干。loadSettings 成功后会被覆盖。
 dstSel.value = "en";
+$("docTarget").value = "en";
+$("setTarget").value = "en";
 
 async function post(url, body) {
   const r = await fetch(url, {
@@ -459,6 +535,7 @@ async function loadSettings() {
     const s = await (await fetch("/api/settings")).json();
     dstSel.value = s.target;
     $("setTarget").value = s.target;
+    $("docTarget").value = s.target;
     $("setEngine").value = s.engine;
     $("ttsVoice").value = s.voice;
     $("setVoice").value = s.voice;
@@ -537,6 +614,8 @@ $("btnTranslate").onclick = async () => {
   hint.className = "hint";
   hint.innerHTML = '<span class="spin">⏳</span> 翻译中…';
   try {
+    const smartTarget = smartTargetFor(text);
+    if (srcSel.value === "auto" && smartTarget) dstSel.value = smartTarget;
     const data = await post("/api/translate", {
       text, source: srcSel.value, target: dstSel.value
     });
@@ -579,6 +658,7 @@ $("btnSnip").onclick = async () => {
       setTimeout(() => { if (hint.textContent === "已取消截图") hint.textContent = ""; }, 3000);
       return;
     }
+    if (data.pinned) { hint.textContent = ""; return; }
     if (data.inplace) { hint.textContent = ""; return; } // 就地贴图翻译：译文已盖回截图位置
     const t = smartTargetFor(data.text);
     if (t) dstSel.value = t;
@@ -737,6 +817,251 @@ $("ttsDl").onclick = async () => {
 };
 
 $("btnOpenDir").onclick = () => fetch("/api/open-audio-dir", { method: "POST" }).catch(() => {});
+
+// ---------- 文档翻译 ----------
+// status: 'wait'|'doing'|'ok'|'warn'(部分没翻成)|'err'；doneTarget 记上次翻成功的目标语言
+let docFiles = [];
+let docExportDir = "";
+const baseName = p => p.split(/[\\/]/).pop();
+
+function addDocPath(p, origin="local") {
+  if (!p || !/\.(txt|docx|xlsx|pdf)$/i.test(p)) return false;
+  if (docFiles.some(f => f.path === p)) return false;
+  docFiles.push({ path: p, name: baseName(p), status: "wait", detail: "", origin, output: "" });
+  return true;
+}
+
+function renderDoc() {
+  const list = $("docList"), empty = $("docEmpty");
+  if (!docFiles.length) { empty.style.display = "flex"; list.innerHTML = ""; return; }
+  empty.style.display = "none";
+  list.innerHTML = "";
+  for (const f of docFiles) {
+    const ext = (f.name.split(".").pop() || "").toLowerCase();
+    const ico = ext === "pdf" ? "📕" : ext === "docx" ? "📘" : ext === "xlsx" ? "📗" : "📄";
+    const cls = ["ok", "warn", "err", "doing"].includes(f.status) ? f.status : "";
+    const item = document.createElement("div");
+    item.className = "doc-item";
+    item.innerHTML = `<span class="ico">${ico}</span>
+      <div class="info"><div class="fname"></div><div class="fstat ${cls}"></div></div>`;
+    item.querySelector(".fname").textContent = f.name;
+    item.querySelector(".fstat").textContent = f.detail || "待翻译";
+    if (f.output) item.querySelector(".fstat").title = f.output;
+    if (f.status !== "doing") {  // 翻译进行中不让删
+      const del = document.createElement("button");
+      del.className = "del"; del.textContent = "✕"; del.title = "移除";
+      del.onclick = () => { docFiles = docFiles.filter(x => x !== f); renderDoc(); };
+      item.appendChild(del);
+    }
+    list.appendChild(item);
+  }
+}
+
+async function docPick(mode) {
+  const st = $("docStatus");
+  try {
+    const data = await post("/api/doc-pick", { mode });
+    if (data.cancelled) return;
+    let added = 0;
+    for (const p of (data.files || [])) if (addDocPath(p)) added++;
+    renderDoc();
+    st.className = "hint";
+    if (mode === "folder" && (data.files || []).length === 0) st.textContent = "这个文件夹里没有可翻译的文档";
+    else st.textContent = added ? `已添加 ${added} 个文件` : "这些文件已经在列表里了";
+  } catch (e) {
+    st.textContent = e.message; st.className = "hint err";
+  }
+}
+$("docPickFiles").onclick = () => docPick("files");
+$("docPickFolder").onclick = () => docPick("folder");
+async function chooseDocExportDir() {
+  const st = $("docStatus");
+  try {
+    const data = await post("/api/doc-export-dir", {});
+    if (data.cancelled) return;
+    docExportDir = data.dir || "";
+    $("docExportPath").textContent = docExportDir || "默认原文件旁边";
+    $("docOpenExport").style.display = docExportDir ? "inline-block" : "none";
+    st.textContent = docExportDir ? "已选择导出文件夹" : "";
+    st.className = "hint";
+  } catch (e) {
+    st.textContent = e.message; st.className = "hint err";
+  }
+}
+$("docExportDir").onclick = chooseDocExportDir;
+$("docExportDir2").onclick = chooseDocExportDir;
+$("docOpenExport").onclick = async () => {
+  const path = docExportDir || (docFiles.find(f => f.output)?.output || "");
+  if (!path) return;
+  try { await post("/api/open-path", { path }); } catch (e) {
+    $("docStatus").textContent = e.message; $("docStatus").className = "hint err";
+  }
+};
+$("docClear").onclick = () => {
+  docFiles = [];
+  renderDoc();
+  $("docStatus").textContent = "";
+  $("docOpenExport").style.display = docExportDir ? "inline-block" : "none";
+};
+
+let docBusy = false;
+$("docStart").onclick = async () => {
+  const st = $("docStatus");
+  if (docBusy) return;
+  if (!docFiles.length) { st.textContent = "请先添加要翻译的文件"; st.className = "hint err"; return; }
+  const target = $("docTarget").value;
+  if (!docExportDir) {
+    await chooseDocExportDir();
+    if (!docExportDir) {
+      st.textContent = "未选择导出路径，将导出到原文件旁边";
+      st.className = "hint";
+    }
+  }
+  // 没翻成功的、或上次翻的是别的语言的，都要(重)翻——换目标语言后能直接重翻
+  const todo = docFiles.filter(f => f.status !== "ok" || f.doneTarget !== target);
+  if (!todo.length) {
+    st.textContent = "这些文件都已翻成当前语言了。想翻成别的语言，改上面的语言后再点开始"; st.className = "hint"; return;
+  }
+  docBusy = true;
+  // 翻译期间锁住会改列表的操作，避免状态错位
+  for (const id of ["docStart", "docPickFiles", "docPickFolder", "docExportDir", "docExportDir2", "docClear"]) $(id).disabled = true;
+  todo.forEach(f => { f.status = "wait"; f.detail = "排队中…"; });
+  renderDoc();
+  let okN = 0, warnN = 0, errN = 0;
+  try {
+    // 逐个文件翻译：进度可见、断一个只影响一个、界面与磁盘始终一致
+    for (let i = 0; i < todo.length; i++) {
+      const f = todo[i];
+      f.status = "doing"; f.detail = "翻译中…";
+      renderDoc();
+      st.className = "hint";
+      st.innerHTML = `<span class="spin">⏳</span> 正在翻译 第 ${i + 1}/${todo.length} 个：${f.name}`;
+      try {
+        const data = await post("/api/doc-translate", { paths: [f.path], target, export_dir: docExportDir });
+        const r = (data.results || [])[0] || {};
+        if (r.ok && (r.partial || 0) > 0) {
+          f.status = "warn"; f.doneTarget = target;
+          f.output = r.output || "";
+          f.detail = `⚠ 已生成 ${baseName(r.output)}，但有 ${r.partial} 段没翻成（网络不稳，还是原文），建议联网后重翻`;
+          warnN++;
+        } else if (r.ok) {
+          f.status = "ok"; f.doneTarget = target;
+          f.output = r.output || "";
+          f.detail = "✓ 已生成 " + baseName(r.output); okN++;
+        } else {
+          f.status = "err"; f.detail = "✗ " + (r.error || "翻译失败"); errN++;
+        }
+      } catch (e) {
+        f.status = "err"; f.detail = "✗ " + e.message; errN++;
+      }
+      renderDoc();
+    }
+    const parts = [`成功 ${okN} 个`];
+    if (warnN) parts.push(`部分没翻成 ${warnN} 个`);
+    if (errN) parts.push(`失败 ${errN} 个`);
+    st.className = errN ? "hint err" : warnN ? "hint" : "hint ok";
+    st.textContent = "完成：" + parts.join("，") + (errN || warnN ? "（看每个文件后面的说明）" : "，可以打开导出文件夹查看");
+    if (okN || warnN) $("docOpenExport").style.display = "inline-block";
+  } finally {
+    docBusy = false;
+    for (const id of ["docStart", "docPickFiles", "docPickFolder", "docExportDir", "docExportDir2", "docClear"]) $(id).disabled = false;
+  }
+};
+
+// 拖拽添加：能拿到真实路径就直接用；拿不到时上传到程序临时区再翻译。
+const docDrop = $("docDrop");
+const DOC_EXT_RE = /\.(txt|docx|xlsx|pdf)$/i;
+const DOC_DRAG_LIMIT = 300;
+
+function readDirEntries(reader) {
+  return new Promise(resolve => {
+    const all = [];
+    const read = () => reader.readEntries(entries => {
+      if (!entries.length) { resolve(all); return; }
+      all.push(...entries);
+      read();
+    }, () => resolve(all));
+    read();
+  });
+}
+
+async function filesFromEntry(entry, prefix="") {
+  if (!entry) return [];
+  if (entry.isFile) {
+    return new Promise(resolve => entry.file(file => {
+      if (!DOC_EXT_RE.test(file.name || "")) { resolve([]); return; }
+      const rel = prefix ? `${prefix}/${file.name}` : file.name;
+      resolve([{ file, rel }]);
+    }, () => resolve([])));
+  }
+  if (!entry.isDirectory) return [];
+  const entries = await readDirEntries(entry.createReader());
+  const out = [];
+  const dirPrefix = prefix ? `${prefix}/${entry.name}` : entry.name;
+  for (const child of entries) {
+    if (out.length >= DOC_DRAG_LIMIT) break;
+    out.push(...await filesFromEntry(child, dirPrefix));
+  }
+  return out.slice(0, DOC_DRAG_LIMIT);
+}
+
+async function collectDroppedDocs(dt) {
+  const docs = [];
+  const items = Array.from(dt.items || []);
+  if (items.length && items.some(item => item.webkitGetAsEntry)) {
+    for (const item of items) {
+      if (docs.length >= DOC_DRAG_LIMIT) break;
+      const entry = item.webkitGetAsEntry ? item.webkitGetAsEntry() : null;
+      docs.push(...await filesFromEntry(entry));
+    }
+  }
+  if (!docs.length) {
+    for (const file of Array.from(dt.files || [])) {
+      if (DOC_EXT_RE.test(file.name || "")) docs.push({ file, rel: file.name });
+    }
+  }
+  return docs.slice(0, DOC_DRAG_LIMIT);
+}
+
+["dragenter", "dragover"].forEach(ev =>
+  docDrop.addEventListener(ev, e => { e.preventDefault(); docDrop.classList.add("over"); }));
+docDrop.addEventListener("dragleave", e => { if (e.target === docDrop) docDrop.classList.remove("over"); });
+docDrop.addEventListener("drop", async e => {
+  e.preventDefault(); docDrop.classList.remove("over");
+  if (docBusy) return;
+  let added = 0, gotPath = false;
+  const upload = new FormData();
+  const droppedDocs = await collectDroppedDocs(e.dataTransfer);
+  for (const { file, rel } of droppedDocs) {
+    const p = file.path;  // 标准浏览器/WebView2 没有这个属性，会是 undefined
+    if (p) gotPath = true;
+    if (p && addDocPath(p)) added++;
+    else if (!p && DOC_EXT_RE.test(file.name || "")) upload.append("files", file, rel || file.name);
+  }
+  const st = $("docStatus");
+  if (added) { renderDoc(); st.textContent = `已添加 ${added} 个文件`; st.className = "hint"; }
+  if (!gotPath && upload.has("files")) {
+    st.innerHTML = '<span class="spin">⏳</span> 正在导入拖拽文件/文件夹…';
+    st.className = "hint";
+    try {
+      const resp = await fetch("/api/doc-upload", { method: "POST", body: upload });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || "拖拽导入失败");
+      let upAdded = 0;
+      for (const p of (data.files || [])) if (addDocPath(p, "upload")) upAdded++;
+      renderDoc();
+      st.textContent = upAdded ? `已导入 ${upAdded} 个拖拽文档` : "拖拽文档已经在列表里了";
+      st.className = "hint";
+      return;
+    } catch (err) {
+      st.textContent = err.message; st.className = "hint err"; return;
+    }
+  }
+  if (!added) {
+    st.textContent = "拖进来的文件/文件夹里没有可添加的文档（只支持 txt/docx/xlsx/pdf）";
+    st.className = "hint err";
+  }
+});
 </script>
 </body>
 </html>

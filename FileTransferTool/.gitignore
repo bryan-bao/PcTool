@@ -2,4 +2,5 @@ build/bin
 node_modules
 frontend/dist
 /FileTransfer.exe
+/FileTransferSetup.exe
 /received/

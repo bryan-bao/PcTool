@@ -4,9 +4,9 @@
   "rate": 0,
   "engine": "auto",
   "autostart": false,
-  "hotkey": "ctrl+alt+t",
+  "hotkey": "ctrl+f12",
   "snip_to_window": false,
   "selection_translate": true,
-  "selection_require_ctrl": false,
+  "selection_require_ctrl": true,
   "audio_dir": ""
 }

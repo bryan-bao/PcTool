@@ -56,6 +56,9 @@ _cfg = {
 _own_title = "翻译·语音小工具"
 _suspended = False  # 截图期间挂起，免得截图里的拖动也触发划词
 _ui = None
+_hook_ready = False
+_hook_error = ""
+_debug = {"down": 0, "up": 0, "maybe": 0, "capture": 0}
 
 
 def configure(enabled, require_ctrl, translate):
@@ -76,6 +79,15 @@ def start():
     threading.Thread(target=_hook_loop, daemon=True).start()
 
 
+def status():
+    return {
+        "ui": _ui is not None,
+        "hook_ready": _hook_ready,
+        "hook_error": _hook_error,
+        "debug": dict(_debug),
+    }
+
+
 def show_result_popup(text):
     """线程安全：在光标处弹出一个翻译结果小窗（给截图就地翻译用）"""
     if _ui:
@@ -89,6 +101,11 @@ def show_overlay(img, region, text=""):
         _ui.q.put(("overlay", (img, region, text)))
 
 
+def show_pin(img, region):
+    if _ui:
+        _ui.q.put(("pin", (img, region)))
+
+
 def show_busy(region=None):
     """线程安全：在截图位置上方亮一个"正在翻译"小条"""
     if _ui:
@@ -100,6 +117,12 @@ def hide_busy():
         _ui.q.put(("hidebusy", None))
 
 
+def test_button(text="test"):
+    if _ui:
+        _ui.text = text
+        _ui.q.put(("showbtn", None))
+
+
 # ====================== 鼠标钩子线程 ======================
 _down = {"pos": None}
 _last_up = {"pos": (0, 0), "t": 0.0}
@@ -109,17 +132,19 @@ _hook_proc_ref = None
 def _proc(nCode, wParam, lParam):
     if nCode == 0 and _ui is not None:
         if wParam == WM_LBUTTONDOWN:
+            _debug["down"] += 1
             st = ctypes.cast(lParam, ctypes.POINTER(MSLLHOOKSTRUCT)).contents
             pos = (st.pt.x, st.pt.y)
             _down["pos"] = pos
             _ui.q.put(("dismiss", pos))  # 点别处就收起已弹出的按钮/弹窗
         elif wParam == WM_LBUTTONUP:
+            _debug["up"] += 1
             st = ctypes.cast(lParam, ctypes.POINTER(MSLLHOOKSTRUCT)).contents
             up = (st.pt.x, st.pt.y)
             dn = _down["pos"]
             _down["pos"] = None
             now = time.time()
-            if dn and (abs(up[0] - dn[0]) > 4 or abs(up[1] - dn[1]) > 4):
+            if dn and (abs(up[0] - dn[0]) > 2 or abs(up[1] - dn[1]) > 2):
                 _maybe_selection()  # 拖动划选
             elif (now - _last_up["t"] < 0.45
                   and abs(up[0] - _last_up["pos"][0]) < 6
@@ -130,6 +155,7 @@ def _proc(nCode, wParam, lParam):
 
 
 def _maybe_selection():
+    _debug["maybe"] += 1
     if _suspended or not _cfg["enabled"]():
         return
     if _cfg["require_ctrl"]() and not (user32.GetAsyncKeyState(VK_CONTROL) & 0x8000):
@@ -141,14 +167,17 @@ def _maybe_selection():
             return
     except Exception:
         pass
+    _debug["capture"] += 1
     _ui.q.put(("capture", None))
 
 
 def _hook_loop():
-    global _hook_proc_ref
+    global _hook_proc_ref, _hook_ready, _hook_error
     _hook_proc_ref = HOOKPROC(_proc)  # 必须保留引用，否则被回收会崩
     if not user32.SetWindowsHookExW(WH_MOUSE_LL, _hook_proc_ref, None, 0):
+        _hook_error = f"SetWindowsHookExW failed: {ctypes.get_last_error()}"
         return
+    _hook_ready = True
     msg = wintypes.MSG()
     while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
         user32.TranslateMessage(ctypes.byref(msg))
@@ -167,6 +196,7 @@ class _UI:
     def __init__(self):
         self.q = queue.Queue()
         self.text = ""
+        self._pending_capture = False
         self._old_clip = None
         self._btn_shown = False
         self._popup_shown = False
@@ -254,6 +284,8 @@ class _UI:
                     self._fill_popup(data)
                 elif kind == "overlay":
                     self._show_overlay(*data)
+                elif kind == "pin":
+                    self._show_pin(*data)
                 elif kind == "busy":
                     self._show_busy(data)
                 elif kind == "hidebusy":
@@ -263,7 +295,11 @@ class _UI:
         self.root.after(40, self._poll)
 
     # ---- 复制选中文字 ----
-    def _do_capture(self):
+    def _do_capture(self, show_button_first=True):
+        if show_button_first:
+            self.text = ""
+            self._pending_capture = True
+            self._show_button()
         try:
             self._old_clip = self.root.clipboard_get()
         except Exception:
@@ -293,9 +329,12 @@ class _UI:
         except Exception:
             pass
         txt = (txt or "").strip()
+        self._pending_capture = False
         if txt:
             self.text = txt
             self._show_button()
+            if self._popup_shown:
+                self._on_btn()
 
     # ---- 小按钮 ----
     def _show_button(self):
@@ -308,7 +347,7 @@ class _UI:
         self._btn_shown = True
         if self._autohide:
             self.root.after_cancel(self._autohide)
-        self._autohide = self.root.after(4000, self._hide_button)
+        self._autohide = self.root.after(8000, self._hide_button)
 
     def _hide_button(self):
         self.btn.withdraw()
@@ -318,6 +357,11 @@ class _UI:
         self._hide_button()
         text = self.text
         if not text:
+            if self._pending_capture:
+                self._show_popup("正在读取选中的文字…", from_click=True)
+                return
+            self._show_popup("没拿到选中的文字，请先确认文字已经被选中，再点一次", from_click=True)
+            self._do_capture(show_button_first=False)
             return
         self._show_popup("翻译中…", from_click=True)
 
@@ -402,24 +446,64 @@ class _UI:
 
             x1, y1 = int(region[0]), int(region[1])
             self._ov_photo = ImageTk.PhotoImage(img)  # 必须保留引用
+            self._ov_img = img
+            self._ov_region = region
             self._ov_text = text
             ov = self.tk.Toplevel(self.root)
             ov.withdraw()
             ov.overrideredirect(True)
             ov.attributes("-topmost", True)
-            lbl = self.tk.Label(ov, image=self._ov_photo, bd=0,
-                                highlightthickness=1, highlightbackground="#5b5ce2")
+            frame = self.tk.Frame(ov, bg="#5b5ce2", highlightthickness=1, highlightbackground="#5b5ce2")
+            frame.pack()
+            lbl = self.tk.Label(frame, image=self._ov_photo, bd=0)
             lbl.pack()
+            bar = self.tk.Frame(frame, bg="#f7f7f8")
+            bar.pack(fill="x")
+            btn_pin = self.tk.Button(bar, text="固定", command=self._pin_overlay,
+                                     bg="#ffffff", fg="#242733", relief="flat",
+                                     font=("Microsoft YaHei", 10), padx=16, pady=4)
+            btn_close = self.tk.Button(bar, text="关闭", command=self._hide_overlay,
+                                       bg="#ffffff", fg="#d33", relief="flat",
+                                       font=("Microsoft YaHei", 10), padx=16, pady=4)
+            btn_pin.pack(side="left", padx=6, pady=5)
+            btn_close.pack(side="right", padx=6, pady=5)
             ov.geometry(f"+{x1}+{y1}")
-            for w in (ov, lbl):
-                w.bind("<Button-1>", lambda e: self._hide_overlay())   # 左键点一下关闭
+            for w in (ov, frame, lbl):
                 w.bind("<Button-3>", self._copy_overlay)               # 右键复制译文并关闭
             ov.deiconify()
             ov.lift()
             self.ov = ov
             if self._ovhide:
                 self.root.after_cancel(self._ovhide)
-            self._ovhide = self.root.after(30000, self._hide_overlay)
+                self._ovhide = None
+        except Exception:
+            pass
+
+    def _pin_overlay(self):
+        try:
+            import json
+            import os
+            import subprocess
+            import sys
+            import uuid
+
+            d = os.getcwd()
+            try:
+                probe = os.path.join(d, ".write_test")
+                open(probe, "w").close()
+                os.remove(probe)
+            except OSError:
+                import tempfile
+                d = tempfile.gettempdir()
+            path = os.path.join(d, f"pin_overlay_{uuid.uuid4().hex}.png")
+            self._ov_img.save(path)
+            with open(path + ".json", "w", encoding="utf-8") as f:
+                json.dump({"box": list(self._ov_region or [])}, f)
+            if getattr(sys, "frozen", False):
+                cmd = [sys.executable, "--pin", path]
+            else:
+                cmd = [sys.executable, os.path.join(os.path.dirname(os.path.abspath(__file__)), "snip.py"), "--pin", path]
+            subprocess.Popen(cmd, close_fds=True)
         except Exception:
             pass
 
@@ -432,6 +516,52 @@ class _UI:
             pass
         self._hide_overlay()
 
+    def _show_pin(self, img, region):
+        self._hide_busy()
+        try:
+            from PIL import ImageTk
+
+            x1, y1 = int(region[0]), int(region[1])
+            photo = ImageTk.PhotoImage(img)
+            pin = self.tk.Toplevel(self.root)
+            pin.withdraw()
+            pin.overrideredirect(True)
+            pin.attributes("-topmost", True)
+            lbl = self.tk.Label(
+                pin,
+                image=photo,
+                bd=0,
+                highlightthickness=2,
+                highlightbackground="#21d66b",
+                cursor="fleur",
+            )
+            lbl.image = photo
+            lbl.pack()
+            pin.geometry(f"+{x1}+{y1}")
+            drag = {"x": 0, "y": 0}
+
+            def start_drag(e):
+                drag["x"], drag["y"] = e.x, e.y
+
+            def do_drag(e):
+                pin.geometry(f"+{pin.winfo_x() + e.x - drag['x']}+{pin.winfo_y() + e.y - drag['y']}")
+
+            def close(_e=None):
+                try:
+                    pin.destroy()
+                except Exception:
+                    pass
+
+            for w in (pin, lbl):
+                w.bind("<ButtonPress-1>", start_drag)
+                w.bind("<B1-Motion>", do_drag)
+                w.bind("<Double-Button-1>", close)
+                w.bind("<Button-3>", close)
+            pin.deiconify()
+            pin.lift()
+        except Exception:
+            pass
+
     def _hide_overlay(self):
         if self.ov is not None:
             try:
@@ -440,6 +570,8 @@ class _UI:
                 pass
             self.ov = None
             self._ov_photo = None
+            self._ov_img = None
+            self._ov_region = None
 
     # ---- 点别处收起 ----
     def _dismiss(self, pos):

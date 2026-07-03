@@ -17,6 +17,7 @@ env/
 build/
 dist/
 *.spec
+!TranslationTool/TranslationTool.spec
 node_modules/
 frontend/dist/
 
@@ -50,12 +51,14 @@ frontend/dist/
 
 # ===== 运行时产物 / 缓存 / 日志 =====
 *.log
+.gocache/
 .omc/
 webview_data/
 audio_output/
 received/
 backup/
 log/
+doc_uploads/
 
 # ===== 各工具特定的本地产物 =====
 ApkInstallTool/platform-tools/adb.exe

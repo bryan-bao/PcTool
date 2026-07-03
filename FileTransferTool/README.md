@@ -26,8 +26,13 @@
 
 ## 开发
 
+- 前置环境: Go 1.25+、Node.js、Wails CLI。若没有 Wails CLI,`build.ps1` / `build-installer.ps1` 会尝试用 `go install github.com/wailsapp/wails/v2/cmd/wails@latest` 自动安装。
 - 实时开发:`wails dev`(热重载)。
 - 打包单 exe:`wails build`,产物在 `build/bin/filetransfer.exe`。
+- 一键打包 Windows 安装包:双击 `build-installer.bat`,产物在项目根目录 `FileTransferSetup.exe`。
+  - 命令行也可运行 `.\build-installer.ps1`。
+  - 第一次打安装包需要 NSIS;脚本会优先用 `winget` 自动安装,没有 `winget` 时按提示手动安装。
+  - 脚本默认设置 `GOPROXY=https://goproxy.cn,direct` 和 `NPM_CONFIG_REGISTRY=https://registry.npmmirror.com`,方便国内网络拉依赖。
 - 跑测试:`go test ./...`。
 
 ## 项目结构

@@ -10,11 +10,11 @@ Set-Location $root
 
 $py         = Join-Path $root "venv\Scripts\python.exe"
 $pyinst     = Join-Path $root "venv\Scripts\pyinstaller.exe"
-$iscc       = Join-Path $root "tools\Inno Setup 6\ISCC.exe"
 $spec       = Join-Path $root "TranslationTool.spec"
 $iss        = Join-Path $root "installer\setup_release.iss"
 $outDir     = Join-Path $root "安装包"
 $exe        = Join-Path $outDir "翻译语音小工具-安装包.exe"
+$req        = Join-Path $root "requirements.txt"
 
 function Step($n,$m){ Write-Host "`n[$n] $m" -ForegroundColor Cyan }
 function Ok($m){ Write-Host "      √ $m" -ForegroundColor Green }
@@ -24,7 +24,50 @@ Write-Host "`n=====  翻译·语音小工具 · 一键打包  =====" -Foreground
 
 # 0 环境检查
 Step 0 "检查打包环境"
-foreach($f in @($py,$pyinst,$iscc,$spec,$iss)){ if(-not (Test-Path $f)){ Die "缺少必要文件/工具：$f" } }
+if(-not (Test-Path $py)){
+  $launcher = Get-Command py.exe -ErrorAction SilentlyContinue
+  $python = Get-Command python.exe -ErrorAction SilentlyContinue
+  if($launcher){
+    & $launcher.Source -3 -m venv (Join-Path $root "venv")
+  } elseif($python) {
+    & $python.Source -m venv (Join-Path $root "venv")
+  } else {
+    Die "没找到 Python。请先安装 Python 3.11+，并勾选 Add Python to PATH"
+  }
+  if($LASTEXITCODE -ne 0){ Die "创建 venv 失败" }
+}
+foreach($f in @($py,$spec,$iss,$req)){ if(-not (Test-Path $f)){ Die "缺少必要文件/工具：$f" } }
+if(-not (Test-Path $pyinst)){
+  & $py -m pip install -U pip
+  if($LASTEXITCODE -ne 0){ Die "升级 pip 失败，请检查网络" }
+  & $py -m pip install -r $req
+  if($LASTEXITCODE -ne 0){ Die "安装 Python 依赖失败，请检查网络" }
+}
+$isccCmd = Get-Command ISCC.exe -ErrorAction SilentlyContinue
+if(!$isccCmd){
+  $commonIscc = @(
+    "C:\Program Files (x86)\Inno Setup 6\ISCC.exe",
+    "C:\Program Files\Inno Setup 6\ISCC.exe"
+  )
+  foreach($candidate in $commonIscc){
+    if(Test-Path $candidate){
+      $env:Path = (Split-Path -Parent $candidate) + ";" + $env:Path
+      $isccCmd = Get-Command ISCC.exe -ErrorAction SilentlyContinue
+      break
+    }
+  }
+}
+if(!$isccCmd){
+  $winget = Get-Command winget.exe -ErrorAction SilentlyContinue
+  if($winget){
+    Write-Host "      未找到 Inno Setup，正在用 winget 安装..." -ForegroundColor Cyan
+    & $winget.Source install -e --id JRSoftware.InnoSetup --accept-source-agreements --accept-package-agreements
+    if($LASTEXITCODE -ne 0){ Die "Inno Setup 自动安装失败，请手动安装：https://jrsoftware.org/isdl.php" }
+    $env:Path = "C:\Program Files (x86)\Inno Setup 6;C:\Program Files\Inno Setup 6;" + $env:Path
+    $isccCmd = Get-Command ISCC.exe -ErrorAction SilentlyContinue
+  }
+}
+if(!$isccCmd){ Die "缺少 Inno Setup 6。请安装后重新运行：https://jrsoftware.org/isdl.php" }
 Ok "环境就绪"
 
 # 1 版本号（可选更新）
@@ -43,7 +86,7 @@ if($want){
 
 # 2 代码语法快速检查（提前发现手误，省得打包半天才报错）
 Step 2 "检查代码语法"
-& $py -m py_compile app.py desktop.py snip.py hotkey.py selection.py bing_translate.py
+& $py -m py_compile app.py desktop.py snip.py hotkey.py selection.py bing_translate.py doc_translate.py
 if($LASTEXITCODE -ne 0){ Die "代码有语法错误，请先改好再打包" }
 Ok "语法没问题"
 
@@ -75,7 +118,7 @@ if(Test-Path $exe){
 $c = [System.IO.File]::ReadAllText($iss,[System.Text.Encoding]::UTF8)
 [System.IO.File]::WriteAllText($iss,$c,(New-Object System.Text.UTF8Encoding($true)))
 Push-Location (Join-Path $root "installer")
-& $iscc /Q "setup_release.iss"
+& $isccCmd.Source /Q "setup_release.iss"
 $code = $LASTEXITCODE
 Pop-Location
 if($code -ne 0){ Die "安装包编译失败" }

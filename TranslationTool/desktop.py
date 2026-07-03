@@ -12,6 +12,14 @@ if len(sys.argv) >= 3 and sys.argv[1] == "--snip":
     from snip import run_snip
 
     sys.exit(run_snip(sys.argv[2]))
+if len(sys.argv) >= 3 and sys.argv[1] == "--pin":
+    from snip import run_pin
+
+    sys.exit(run_pin(sys.argv[2]))
+if len(sys.argv) >= 3 and sys.argv[1] == "--image":
+    from snip import run_image_window
+
+    sys.exit(run_image_window(sys.argv[2], "截图翻译", cleanup=True))
 
 import socket
 import threading
@@ -87,6 +95,9 @@ if started:
     threading.Thread(
         target=lambda: (time.sleep(2), app_module.get_ocr()), daemon=True
     ).start()
+    threading.Thread(
+        target=lambda: (time.sleep(1), app_module.warm_translation()), daemon=True
+    ).start()
 
     # 划词翻译：全局监听鼠标划选 → 光标旁弹小按钮 → 点击弹翻译小窗
     try:
@@ -95,12 +106,16 @@ if started:
         selection.configure(
             enabled=lambda: bool(load_settings().get("selection_translate")),
             require_ctrl=lambda: bool(load_settings().get("selection_require_ctrl")),
-            translate=lambda t: app_module.translate_text(t),
+            translate=lambda t: app_module.translate_selection_text(t),
         )
         selection.start()
         app_module.SELECTION = selection  # 截图就地翻译复用它的小弹窗
-    except Exception:
-        pass
+    except Exception as e:
+        try:
+            with open(os.path.join(DATA_DIR, "selection_error.log"), "w", encoding="utf-8") as f:
+                f.write(repr(e))
+        except Exception:
+            pass
 
     # ---- 系统托盘：点窗口关闭 = 收进托盘后台待命，真正退出走托盘菜单 ----
     import pystray

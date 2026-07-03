@@ -1,5 +1,3 @@
-// Package sender 实现"主动把本地文件发送到对端"的客户端逻辑,
-// 用于电脑↔电脑互传。它复用对端 server 的 /api/offer、/api/upload/status、/api/upload 接口。
 package sender
 
 import (
@@ -9,6 +7,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 
 	"filetransfer/internal/ratelimit"
 	"filetransfer/internal/transfer"
@@ -26,8 +25,7 @@ type offerReq struct {
 	Files []offerFile `json:"files"`
 }
 
-// SendFile 把 localPath 发送到 baseURL(对端服务地址,如 http://192.168.1.5:5686)。
-// t 是本机的发送任务(用于上报进度);global/taskLim 是限速器(可为 nil);touch 进度回调(可为 nil)。
+// SendFile uploads localPath to baseURL and reports progress through t.
 func SendFile(baseURL, peer string, t *transfer.Task, localPath string, global, taskLim *ratelimit.Limiter, touch func()) error {
 	fi, err := os.Stat(localPath)
 	if err != nil {
@@ -35,59 +33,111 @@ func SendFile(baseURL, peer string, t *transfer.Task, localPath string, global, 
 	}
 	t.TotalBytes = fi.Size()
 
-	// 1) 先 offer,告诉对端将要传的文件(对端会弹出任务,可点同意/拒绝)
 	ob, _ := json.Marshal(offerReq{Peer: peer, Files: []offerFile{
 		{ID: t.ID, Name: t.Name, RelPath: t.RelPath, TotalBytes: fi.Size()},
 	}})
 	if resp, err := http.Post(baseURL+"/api/offer", "application/json", bytes.NewReader(ob)); err != nil {
-		return fmt.Errorf("连接对端失败: %w", err)
-	} else {
-		resp.Body.Close()
+		return fmt.Errorf("connect peer failed: %w", err)
+	} else if err := expectOK(resp); err != nil {
+		return err
 	}
 
-	// 2) 查询对端已收到的偏移(断点续传)
-	var offset int64
-	if r, err := http.Get(baseURL + "/api/upload/status?id=" + t.ID); err == nil {
-		var st struct {
-			Offset int64 `json:"offset"`
+	var lastErr error
+	for attempt := 0; attempt < 3; attempt++ {
+		offset, err := uploadOffset(baseURL, t.ID)
+		if err != nil {
+			return err
 		}
-		json.NewDecoder(r.Body).Decode(&st)
-		r.Body.Close()
-		offset = st.Offset
-	}
+		if offset > fi.Size() {
+			return fmt.Errorf("invalid peer offset: %d > %d", offset, fi.Size())
+		}
 
-	// 3) 打开本地文件并定位到续传偏移
+		status, body, err := uploadFromOffset(baseURL, t, localPath, fi.Size(), offset, global, taskLim, touch)
+		if err != nil {
+			return err
+		}
+		if status == http.StatusOK {
+			return nil
+		}
+
+		lastErr = fmt.Errorf("peer returned status %d: %s", status, body)
+		if status == http.StatusConflict || status >= http.StatusInternalServerError {
+			continue
+		}
+		return lastErr
+	}
+	return lastErr
+}
+
+func uploadOffset(baseURL, id string) (int64, error) {
+	resp, err := http.Get(baseURL + "/api/upload/status?id=" + id)
+	if err != nil {
+		return 0, fmt.Errorf("query upload offset failed: %w", err)
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		return 0, responseError(resp)
+	}
+	var st struct {
+		Offset int64 `json:"offset"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&st); err != nil {
+		return 0, fmt.Errorf("decode upload offset failed: %w", err)
+	}
+	return st.Offset, nil
+}
+
+func uploadFromOffset(baseURL string, t *transfer.Task, localPath string, total, offset int64, global, taskLim *ratelimit.Limiter, touch func()) (int, string, error) {
 	f, err := os.Open(localPath)
 	if err != nil {
-		return err
+		return 0, "", err
 	}
 	defer f.Close()
 	if offset > 0 {
 		if _, err := f.Seek(offset, io.SeekStart); err != nil {
-			return err
+			return 0, "", err
 		}
 	}
 	t.SetTransferred(offset)
+	if touch != nil {
+		touch()
+	}
 
-	// 4) 限速读 + 进度统计,PUT 给对端
 	reader := ratelimit.NewLimitedReader(f, taskLim, global)
 	pr := &progressReader{r: reader, t: t, touch: touch}
-
 	req, _ := http.NewRequest("PUT", baseURL+"/api/upload?id="+t.ID, pr)
-	req.Header.Set("Content-Range", fmt.Sprintf("bytes %d-/%d", offset, fi.Size()))
-	req.ContentLength = fi.Size() - offset
+	req.Header.Set("Content-Range", fmt.Sprintf("bytes %d-/%d", offset, total))
+	req.ContentLength = total - offset
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return fmt.Errorf("传输中断: %w", err)
+		return 0, "", fmt.Errorf("transfer interrupted: %w", err)
 	}
 	defer resp.Body.Close()
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("对端返回状态 %d", resp.StatusCode)
-	}
-	return nil
+	body := readResponseBody(resp)
+	return resp.StatusCode, body, nil
 }
 
-// progressReader 在读取时累加已发送字节并回调上报。
+func expectOK(resp *http.Response) error {
+	defer resp.Body.Close()
+	if resp.StatusCode == http.StatusOK {
+		return nil
+	}
+	return responseError(resp)
+}
+
+func responseError(resp *http.Response) error {
+	return fmt.Errorf("peer returned status %d: %s", resp.StatusCode, readResponseBody(resp))
+}
+
+func readResponseBody(resp *http.Response) string {
+	b, _ := io.ReadAll(io.LimitReader(resp.Body, 4096))
+	msg := strings.TrimSpace(string(b))
+	if msg == "" {
+		msg = http.StatusText(resp.StatusCode)
+	}
+	return msg
+}
+
 type progressReader struct {
 	r     io.Reader
 	t     *transfer.Task

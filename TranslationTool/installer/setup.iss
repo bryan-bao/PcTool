@@ -1,5 +1,5 @@
 ﻿; 翻译·语音小工具 安装包配置（Inno Setup 6.5+）
-; 编译方法: "E:\chao-tool\TranslationTool\tools\Inno Setup 6\ISCC.exe" setup.iss
+; 编译方法: ISCC.exe setup.iss
 
 [Setup]
 AppId={{8C1E7A52-4B3D-4F69-9D2A-6E5F31C0A9B4}

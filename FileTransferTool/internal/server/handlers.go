@@ -33,6 +33,23 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
+	if tk.Status == transfer.StatusRejected {
+		f.Close()
+		http.Error(w, "transfer rejected", http.StatusForbidden)
+		return
+	}
+	if start, err := parseUploadStart(r.Header.Get("Content-Range")); err != nil {
+		f.Close()
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	} else if start >= 0 && start != off {
+		f.Close()
+		tk.SetTransferred(off)
+		msg := fmt.Sprintf("resume offset mismatch: sender=%d receiver=%d", start, off)
+		s.mgr.SetStatus(id, transfer.StatusPaused, msg)
+		writeJSON(w, http.StatusConflict, map[string]any{"error": msg, "offset": off})
+		return
+	}
 	tk.SetTransferred(off)
 
 	// 接收方向也套两级限速(限制对方上传占用本机带宽)。
@@ -42,6 +59,10 @@ func (s *Server) handleUpload(w http.ResponseWriter, r *http.Request) {
 	buf := make([]byte, 64*1024)
 	var copyErr error
 	for {
+		if tk.Status == transfer.StatusRejected {
+			copyErr = fmt.Errorf("transfer rejected")
+			break
+		}
 		n, rerr := reader.Read(buf)
 		if n > 0 {
 			if _, werr := f.Write(buf[:n]); werr != nil {
@@ -467,6 +488,21 @@ func (s *Server) serveShareDir(w http.ResponseWriter, r *http.Request, it shareI
 	s.mgr.SetStatus(tid, transfer.StatusDone, "")
 }
 
+func parseUploadStart(h string) (int64, error) {
+	if h == "" {
+		return -1, nil
+	}
+	if !strings.HasPrefix(h, "bytes ") {
+		return -1, fmt.Errorf("invalid Content-Range: %q", h)
+	}
+	rest := strings.TrimPrefix(h, "bytes ")
+	dash := strings.IndexByte(rest, '-')
+	if dash < 0 {
+		return -1, fmt.Errorf("invalid Content-Range: %q", h)
+	}
+	return strconv.ParseInt(rest[:dash], 10, 64)
+}
+
 // parseRangeStart 解析 "bytes=<start>-" 的起始偏移。
 func parseRangeStart(h string) (int64, error) {
 	if h == "" {
@@ -492,7 +528,7 @@ type offerReq struct {
 	Files []offerFile `json:"files"`
 }
 
-// handleOffer 接收发送方的文件清单,建出 pending 任务并经 WS 通知接收端弹窗。
+// handleOffer 接收发送方的文件清单,建出接收任务并经 WS 通知接收端。
 func (s *Server) handleOffer(w http.ResponseWriter, r *http.Request) {
 	var req offerReq
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -503,7 +539,7 @@ func (s *Server) handleOffer(w http.ResponseWriter, r *http.Request) {
 		s.mgr.Add(&transfer.Task{
 			ID: fdef.ID, Name: fdef.Name, RelPath: fdef.RelPath,
 			TotalBytes: fdef.TotalBytes, Direction: transfer.DirRecv,
-			Peer: req.Peer, Status: transfer.StatusPending,
+			Peer: req.Peer, Status: transfer.StatusTransferring,
 		})
 	}
 	s.hub.broadcast("offer", req)

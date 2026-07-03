@@ -40,5 +40,8 @@ func OpenForResume(dest string) (*os.File, int64, error) {
 
 // Finalize 在接收完成后,把 dest.part 改名为 dest。
 func Finalize(dest string) error {
+	if err := os.Remove(dest); err != nil && !os.IsNotExist(err) {
+		return err
+	}
 	return os.Rename(dest+partSuffix, dest)
 }
