@@ -1,18 +1,25 @@
 @echo off
-chcp 65001 >nul
-rem 一键把工具打包成独立 exe(自带 adb,发给别人双击即用,无需装 Python)
+setlocal
 cd /d "%~dp0"
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0setup.ps1"
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 
-echo [1/2] 安装/检查 PyInstaller ...
-python -m pip install pyinstaller >nul 2>&1
+echo [1/2] Installing/checking PyInstaller...
+venv\Scripts\python.exe -m pip install pyinstaller
+if errorlevel 1 (
+  pause
+  exit /b 1
+)
 
-echo [2/2] 开始打包 ...
-python -m PyInstaller --noconfirm --clean --windowed ^
-  --name "APK一键安装工具" ^
+echo [2/2] Building exe...
+venv\Scripts\python.exe -m PyInstaller --noconfirm --clean --windowed ^
+  --name "APKInstallTool" ^
   --add-data "platform-tools;platform-tools" ^
   run.py
 
 echo.
-echo 打包完成!成品在 dist\APK一键安装工具\ 文件夹里。
-echo 把整个 "APK一键安装工具" 文件夹拷给别人,双击里面的 exe 即可运行。
+echo Build finished. Output folder: dist\APKInstallTool
 pause

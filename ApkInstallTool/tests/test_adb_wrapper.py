@@ -27,7 +27,12 @@ def test_list_devices_parses_output():
         "XYZ789    unauthorized\n"
         "\n"
     )
-    with patch.object(adb_wrapper, "_run", return_value=(0, sample, "")):
+    def fake_run(args, timeout=120):
+        if args == ["devices", "-l"]:
+            return (0, sample, "")
+        return (0, "", "")
+
+    with patch.object(adb_wrapper, "_run", side_effect=fake_run):
         devices = adb_wrapper.list_devices()
     assert devices == [
         Device(serial="ABC123", model="Pixel_5", status="device"),
@@ -38,6 +43,58 @@ def test_list_devices_parses_output():
 def test_list_devices_empty():
     with patch.object(adb_wrapper, "_run", return_value=(0, "List of devices attached\n\n", "")):
         assert adb_wrapper.list_devices() == []
+
+
+def test_list_devices_fetches_model_when_adb_output_has_no_model():
+    calls = []
+
+    def fake_run(args, timeout=120):
+        calls.append(args)
+        if args == ["devices", "-l"]:
+            return (0, "List of devices attached\n192.168.1.5:37123    device\n", "")
+        if args == ["-s", "192.168.1.5:37123", "shell", "getprop", "ro.product.marketname"]:
+            return (0, "", "")
+        if args == ["-s", "192.168.1.5:37123", "shell", "getprop", "ro.product.vendor.marketname"]:
+            return (0, "", "")
+        if args == ["-s", "192.168.1.5:37123", "shell", "getprop", "ro.config.marketing_name"]:
+            return (0, "", "")
+        if args == ["-s", "192.168.1.5:37123", "shell", "getprop", "ro.product.manufacturer"]:
+            return (0, "Google\n", "")
+        if args == ["-s", "192.168.1.5:37123", "shell", "getprop", "ro.product.model"]:
+            return (0, "Pixel 8\n", "")
+        return (1, "", "unexpected")
+
+    with patch.object(adb_wrapper, "_run", side_effect=fake_run):
+        devices = adb_wrapper.list_devices()
+
+    assert devices == [
+        Device(serial="192.168.1.5:37123", model="Google Pixel 8", status="device"),
+    ]
+    assert calls == [
+        ["devices", "-l"],
+        ["-s", "192.168.1.5:37123", "shell", "getprop", "ro.product.marketname"],
+        ["-s", "192.168.1.5:37123", "shell", "getprop", "ro.product.vendor.marketname"],
+        ["-s", "192.168.1.5:37123", "shell", "getprop", "ro.config.marketing_name"],
+        ["-s", "192.168.1.5:37123", "shell", "getprop", "ro.product.manufacturer"],
+        ["-s", "192.168.1.5:37123", "shell", "getprop", "ro.product.model"],
+    ]
+
+
+def test_list_devices_prefers_market_name_over_adb_model():
+    sample = "List of devices attached\nABC123    device product:p model:V2303A device:d\n"
+
+    def fake_run(args, timeout=120):
+        if args == ["devices", "-l"]:
+            return (0, sample, "")
+        if args == ["-s", "ABC123", "shell", "getprop", "ro.product.marketname"]:
+            return (0, "vivo X100 Pro\n", "")
+        if args == ["-s", "ABC123", "shell", "getprop", "ro.product.manufacturer"]:
+            return (0, "vivo\n", "")
+        return (0, "", "")
+
+    with patch.object(adb_wrapper, "_run", side_effect=fake_run):
+        devices = adb_wrapper.list_devices()
+    assert devices == [Device(serial="ABC123", model="vivo X100 Pro", status="device")]
 
 
 def test_install_apk_success():
@@ -98,3 +155,36 @@ def test_connect_wifi_failure():
         result = adb_wrapper.connect_wifi("192.168.1.5", "5555")
     assert result.ok is False
     assert "连接失败" in result.message
+
+
+def test_discover_wifi_targets_parses_mdns_services():
+    sample = (
+        "List of discovered mdns services\n"
+        "adb-ABC123._adb-tls-connect._tcp. 192.168.1.5:37123\n"
+        "adb-XYZ789._adb._tcp. 192.168.1.6:5555\n"
+        "\n"
+    )
+    with patch.object(adb_wrapper, "_run", return_value=(0, sample, "")):
+        targets, raw = adb_wrapper.discover_wifi_targets()
+    assert targets == ["192.168.1.5:37123", "192.168.1.6:5555"]
+    assert raw == sample.strip()
+
+
+def test_connect_discovered_wifi_devices_connects_all_targets():
+    calls = []
+
+    def fake_run(args, timeout=120):
+        calls.append(args)
+        if args == ["mdns", "services"]:
+            return (0, "adb-ABC123._adb-tls-connect._tcp. 192.168.1.5:37123\n", "")
+        if args == ["connect", "192.168.1.5:37123"]:
+            return (0, "connected to 192.168.1.5:37123", "")
+        return (1, "", "unexpected")
+
+    with patch.object(adb_wrapper, "_run", side_effect=fake_run):
+        result = adb_wrapper.connect_discovered_wifi_devices()
+
+    assert calls == [["mdns", "services"], ["connect", "192.168.1.5:37123"]]
+    assert result.discovered == ["192.168.1.5:37123"]
+    assert result.connected == ["192.168.1.5:37123"]
+    assert result.failed == []

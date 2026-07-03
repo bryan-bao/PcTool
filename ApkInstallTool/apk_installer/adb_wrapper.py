@@ -1,5 +1,6 @@
 """封装所有 ADB 调用,返回结构化结果。不依赖界面代码。"""
 
+import re
 import subprocess
 from dataclasses import dataclass
 from pathlib import Path
@@ -24,6 +25,14 @@ class AdbResult:
     raw: str      # 原始输出,便于排查
 
 
+@dataclass
+class WifiDiscoveryResult:
+    discovered: list[str]
+    connected: list[str]
+    failed: list[str]
+    raw: str
+
+
 def find_adb() -> str:
     """优先用随附的 adb.exe,找不到就回退系统 PATH 中的 'adb'。"""
     if _BUNDLED_ADB.exists():
@@ -44,6 +53,29 @@ def _run(args: list[str], timeout: int = 120) -> tuple[int, str, str]:
     return proc.returncode, proc.stdout or "", proc.stderr or ""
 
 
+def _getprop(serial: str, prop: str) -> str:
+    rc, out, _ = _run(["-s", serial, "shell", "getprop", prop], timeout=10)
+    return out.strip() if rc == 0 else ""
+
+
+def _get_device_model(serial: str) -> str:
+    """通过 getprop 查询设备品牌和型号。"""
+    market_name = (
+        _getprop(serial, "ro.product.marketname")
+        or _getprop(serial, "ro.product.vendor.marketname")
+        or _getprop(serial, "ro.config.marketing_name")
+    )
+    manufacturer = _getprop(serial, "ro.product.manufacturer")
+    model = _getprop(serial, "ro.product.model")
+    if market_name:
+        if manufacturer and market_name.lower().startswith(manufacturer.lower()):
+            return market_name
+        parts = [part for part in (manufacturer, market_name) if part]
+        return " ".join(dict.fromkeys(parts))
+    parts = [part for part in (manufacturer, model) if part]
+    return " ".join(parts)
+
+
 def list_devices() -> list[Device]:
     """返回当前已连接设备列表。"""
     _, out, _ = _run(["devices", "-l"])
@@ -61,8 +93,42 @@ def list_devices() -> list[Device]:
             if token.startswith("model:"):
                 model = token.split(":", 1)[1]
                 break
+        if status == "device":
+            model = _get_device_model(serial) or model
         devices.append(Device(serial=serial, model=model, status=status))
     return devices
+
+
+def discover_wifi_targets() -> tuple[list[str], str]:
+    """通过 ADB mDNS 发现可直接连接的无线调试地址。"""
+    _, out, err = _run(["mdns", "services"], timeout=15)
+    raw = (out + "\n" + err).strip()
+    targets: list[str] = []
+    for line in raw.splitlines():
+        if "_adb-tls-connect._tcp" not in line and "_adb._tcp" not in line:
+            continue
+        match = re.search(r"((?:\d{1,3}\.){3}\d{1,3}:\d+|\[[0-9a-fA-F:]+\]:\d+)$", line.strip())
+        if match:
+            target = match.group(1)
+            if target not in targets:
+                targets.append(target)
+    return targets, raw
+
+
+def connect_discovered_wifi_devices() -> WifiDiscoveryResult:
+    """连接当前局域网内已配对且可通过 ADB mDNS 发现的无线调试设备。"""
+    targets, raw = discover_wifi_targets()
+    connected: list[str] = []
+    failed: list[str] = []
+    for target in targets:
+        rc, out, err = _run(["connect", target], timeout=20)
+        result = (out + "\n" + err).strip()
+        low = result.lower()
+        if rc == 0 and ("connected" in low or "already connected" in low) and "cannot" not in low:
+            connected.append(target)
+        else:
+            failed.append(target)
+    return WifiDiscoveryResult(discovered=targets, connected=connected, failed=failed, raw=raw)
 
 
 def install_apk(serial: str, apk_path: str) -> AdbResult:

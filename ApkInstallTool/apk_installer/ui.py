@@ -189,13 +189,24 @@ class App:
         self._log("正在检测设备…")
 
         def work():
+            if self.mode_switch.get() == "WiFi":
+                self._set_status("正在发现 WiFi 设备…", MUTED)
+                self._log("正在发现已开启无线调试的设备…")
+                discovered = adb_wrapper.connect_discovered_wifi_devices()
+                if discovered.connected:
+                    self._log(f"已自动连接 {len(discovered.connected)} 台 WiFi 设备。")
+                elif discovered.discovered:
+                    self._log("发现了 WiFi 调试服务,但连接失败。请确认设备已配对。")
+                else:
+                    self._log("未发现可自动连接的 WiFi 调试设备。未配对的设备需要先手动配对。")
+
             self._devices = adb_wrapper.list_devices()
             if not self._devices:
                 self.dot.configure(text_color=DOT_OFF)
                 self.device_menu.configure(values=["(未检测到设备)"])
                 self.device_menu.set("(未检测到设备)")
                 self._set_status("没检测到设备", WARN_C)
-                self._log("没检测到设备。USB:检查线和 USB 调试;WiFi:先在上方配对连接。")
+                self._log("没检测到设备。USB:检查线和 USB 调试;WiFi:先开启无线调试并配对。")
                 return
             labels = [f"{d.model} [{d.serial}] ({d.status})" for d in self._devices]
             self.device_menu.configure(values=labels)
